@@ -7,7 +7,8 @@ import streamlit as st
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import load_model
-import keras
+from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
+from tensorflow.keras.applications.efficientnet import preprocess_input as effnet_preprocess
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -52,7 +53,6 @@ html, body, [class*="css"] {
 
 .main .block-container { padding: 1.5rem 2rem; max-width: 1400px; }
 
-/* Header */
 .hero-header {
     background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
     border: 1px solid rgba(0,229,255,0.15);
@@ -89,7 +89,6 @@ html, body, [class*="css"] {
     text-transform: uppercase;
 }
 
-/* Cards */
 .card {
     background: var(--surface);
     border: 1px solid rgba(255,255,255,0.07);
@@ -106,7 +105,6 @@ html, body, [class*="css"] {
     margin-bottom: 1rem;
 }
 
-/* Metric boxes */
 .metric-box {
     background: var(--surface2);
     border-radius: 10px;
@@ -117,7 +115,6 @@ html, body, [class*="css"] {
 .metric-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
 .metric-value { font-family: 'Space Mono', monospace; font-size: 1.5rem; font-weight: 700; color: var(--accent); }
 
-/* Class badges */
 .badge {
     display: inline-block;
     padding: 0.2rem 0.6rem;
@@ -133,10 +130,9 @@ html, body, [class*="css"] {
 .badge-normal{ background: rgba(0,229,255,0.15); color: #00e5ff; border: 1px solid rgba(0,229,255,0.3); }
 .badge-mh    { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
 .badge-dr    { background: rgba(236,72,153,0.15); color: #f472b6; border: 1px solid rgba(236,72,153,0.3); }
-.badge-scr   { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+.badge-csr   { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
 .badge-amd   { background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.3); }
 
-/* Prediction result */
 .pred-correct {
     background: rgba(16,185,129,0.1);
     border: 1px solid rgba(16,185,129,0.3);
@@ -156,7 +152,6 @@ html, body, [class*="css"] {
     font-size: 0.85rem;
 }
 
-/* Analysis box */
 .analysis-box {
     background: linear-gradient(135deg, rgba(0,229,255,0.05), rgba(124,58,237,0.05));
     border: 1px solid rgba(0,229,255,0.2);
@@ -168,10 +163,8 @@ html, body, [class*="css"] {
     margin-top: 1rem;
 }
 
-/* Progress bar custom */
 .stProgress > div > div { background: linear-gradient(90deg, #00e5ff, #7c3aed) !important; }
 
-/* Tab styling */
 .stTabs [data-baseweb="tab-list"] { gap: 0.5rem; background: transparent; }
 .stTabs [data-baseweb="tab"] {
     background: var(--surface);
@@ -187,13 +180,11 @@ html, body, [class*="css"] {
     color: var(--accent) !important;
 }
 
-/* Sidebar */
 section[data-testid="stSidebar"] {
     background: var(--surface);
     border-right: 1px solid rgba(255,255,255,0.07);
 }
 
-/* Buttons */
 .stButton > button {
     background: linear-gradient(135deg, #00e5ff22, #7c3aed22);
     border: 1px solid var(--accent);
@@ -219,12 +210,13 @@ div[data-testid="stFileUploader"] {
 """, unsafe_allow_html=True)
 
 # ─── Konstanta ─────────────────────────────────────────────────────────────────
+# Urutan sesuai training: os.listdir train_path
 CLASS_NAMES = ['CNV', 'DR', 'CSR', 'MH', 'AMD', 'DRUSEN', 'DME', 'NORMAL']
 
 CLASS_BADGE = {
     'CNV':    'badge-cnv',
     'DR':     'badge-dr',
-    'CSR':    'badge-scr',   # pakai style yang sama
+    'CSR':    'badge-csr',
     'MH':     'badge-mh',
     'AMD':    'badge-amd',
     'DRUSEN': 'badge-drusen',
@@ -244,37 +236,16 @@ CLASS_DESC = {
 }
 IMG_SIZE = (224, 224)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# GANTI URL BERIKUT DENGAN LINK GOOGLE DRIVE KAMU
-# Format: https://drive.google.com/file/d/FILE_ID/view
-# ─────────────────────────────────────────────────────────────────────────────
 GDRIVE_RESNET_URL       = "https://drive.google.com/file/d/1eFgQxxFegoF1699bTVh20fVzmXl2n-EJ/view?usp=drive_link"
 GDRIVE_EFFICIENTNET_URL = "https://drive.google.com/file/d/1_WIEbc5xHhesDSjRD7SD4vxct2WDgll_/view?usp=sharing"
-
-# Path folder contoh gambar (dari Google Drive / lokal)
-# Isi dengan dict: {'CNV': [list_path_gambar], ...}
-# Atau biarkan kosong, nanti upload manual
-SAMPLE_IMAGES_DRIVE = {}  # kosongkan jika belum ada
 
 MODEL_DIR = Path("models")
 MODEL_DIR.mkdir(exist_ok=True)
 
 # ─── Fungsi Helper ─────────────────────────────────────────────────────────────
 
-def gdrive_direct_url(sharing_url: str) -> str:
-    """Konversi URL share Google Drive ke URL download langsung."""
-    if "id=" in sharing_url:
-        fid = sharing_url.split("id=")[1].split("&")[0]
-    elif "/d/" in sharing_url:
-        fid = sharing_url.split("/d/")[1].split("/")[0]
-    else:
-        return sharing_url
-    return f"https://drive.google.com/uc?export=download&id={fid}"
-
-
 @st.cache_resource(show_spinner=False)
 def load_model_from_drive(url: str, filename: str):
-    """Download & load model Keras dari Google Drive."""
     path = MODEL_DIR / filename
     if not path.exists():
         with st.spinner(f"⬇️ Mengunduh model {filename}..."):
@@ -283,15 +254,31 @@ def load_model_from_drive(url: str, filename: str):
     return model
 
 
-def preprocess_image(img: Image.Image) -> np.ndarray:
-    """Preprocess gambar PIL → tensor siap prediksi."""
+def preprocess_resnet(img: Image.Image) -> np.ndarray:
+    """Preprocess untuk ResNet50 — pakai resnet50 preprocess_input."""
     img = img.convert("RGB").resize(IMG_SIZE)
-    arr = np.array(img, dtype=np.float32) / 255.0
+    arr = np.array(img, dtype=np.float32)
+    arr = resnet_preprocess(arr)
     return np.expand_dims(arr, 0)
 
 
+def preprocess_effnet(img: Image.Image) -> np.ndarray:
+    """Preprocess untuk EfficientNetB0 — pakai efficientnet preprocess_input."""
+    img = img.convert("RGB").resize(IMG_SIZE)
+    arr = np.array(img, dtype=np.float32)
+    arr = effnet_preprocess(arr)
+    return np.expand_dims(arr, 0)
+
+
+def get_preprocess_fn(model_name: str):
+    """Return fungsi preprocess yang sesuai berdasarkan nama model."""
+    if model_name == 'ResNet50':
+        return preprocess_resnet
+    else:
+        return preprocess_effnet
+
+
 def get_last_conv_layer(model) -> str:
-    """Cari nama layer konvolusi terakhir secara otomatis."""
     for layer in reversed(model.layers):
         if isinstance(layer, tf.keras.layers.Conv2D):
             return layer.name
@@ -299,10 +286,6 @@ def get_last_conv_layer(model) -> str:
 
 
 def grad_cam_plusplus(model, img_array: np.ndarray, class_idx: int, layer_name: str) -> np.ndarray:
-    """
-    Hitung Grad-CAM++ heatmap.
-    Returns: heatmap (H x W) ternormalisasi [0,1].
-    """
     grad_model = tf.keras.models.Model(
         inputs=model.inputs,
         outputs=[model.get_layer(layer_name).output, model.output]
@@ -322,23 +305,21 @@ def grad_cam_plusplus(model, img_array: np.ndarray, class_idx: int, layer_name: 
     grads2    = grads2[0]
     grads3    = grads3[0]
 
-    global_sum = tf.reduce_sum(conv_out, axis=(0, 1))
-    alpha_num  = grads2
+    global_sum  = tf.reduce_sum(conv_out, axis=(0, 1))
+    alpha_num   = grads2
     alpha_denom = 2.0 * grads2 + grads3 * global_sum[tf.newaxis, tf.newaxis, :]
     alpha_denom = tf.where(tf.equal(alpha_denom, 0), tf.ones_like(alpha_denom), alpha_denom)
-    alphas     = alpha_num / alpha_denom
-    weights    = tf.reduce_sum(tf.nn.relu(grads1) * alphas, axis=(0, 1))
-    cam        = tf.reduce_sum(weights * conv_out, axis=-1)
-    cam        = tf.nn.relu(cam).numpy()
+    alphas  = alpha_num / alpha_denom
+    weights = tf.reduce_sum(tf.nn.relu(grads1) * alphas, axis=(0, 1))
+    cam     = tf.reduce_sum(weights * conv_out, axis=-1)
+    cam     = tf.nn.relu(cam).numpy()
 
-    # Normalisasi
     cam = cv2.resize(cam, IMG_SIZE)
     cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-8)
     return cam
 
 
 def overlay_heatmap(original: np.ndarray, heatmap: np.ndarray, alpha: float = 0.45):
-    """Overlay heatmap Grad-CAM++ pada gambar asli."""
     heatmap_color = cm.jet(heatmap)[:, :, :3]
     heatmap_color = (heatmap_color * 255).astype(np.uint8)
     original_uint8 = (original * 255).astype(np.uint8)
@@ -347,14 +328,12 @@ def overlay_heatmap(original: np.ndarray, heatmap: np.ndarray, alpha: float = 0.
 
 
 def predict(model, img_array: np.ndarray):
-    """Prediksi kelas dan confidence."""
     preds = model.predict(img_array, verbose=0)[0]
     idx   = int(np.argmax(preds))
     return idx, float(preds[idx]) * 100, preds
 
 
 def fig_to_image(fig):
-    """Konversi matplotlib figure → PIL Image."""
     buf = io.BytesIO()
     fig.savefig(buf, format='png', bbox_inches='tight', facecolor='#0a0e1a')
     buf.seek(0)
@@ -367,11 +346,7 @@ def render_badge(label: str) -> str:
 
 
 def generate_gradcam_analysis(model_name: str, correct_cases, wrong_cases,
-                               model, layer_name: str) -> plt.Figure:
-    """
-    Buat figure analisis Grad-CAM++ untuk 5 prediksi benar + 5 salah.
-    correct_cases / wrong_cases: list of (pil_image, true_label, pred_label, confidence)
-    """
+                               model, layer_name: str, preprocess_fn) -> plt.Figure:
     n_correct = len(correct_cases)
     n_wrong   = len(wrong_cases)
     total     = n_correct + n_wrong
@@ -391,18 +366,21 @@ def generate_gradcam_analysis(model_name: str, correct_cases, wrong_cases,
 
     for row_idx, (pil_img, true_lbl, pred_lbl, conf) in enumerate(correct_cases + wrong_cases):
         is_correct = row_idx < n_correct
-        img_arr = np.array(pil_img.convert("RGB").resize(IMG_SIZE), dtype=np.float32) / 255.0
-        inp     = np.expand_dims(img_arr, 0)
+
+        # Preprocess sesuai model
+        inp      = preprocess_fn(pil_img)
+        # Untuk display tetap pakai /255
+        orig_arr = np.array(pil_img.convert("RGB").resize(IMG_SIZE), dtype=np.float32) / 255.0
         pred_idx = CLASS_NAMES.index(pred_lbl)
 
         heatmap = grad_cam_plusplus(model, inp, pred_idx, layer_name)
-        overlay = overlay_heatmap(img_arr, heatmap)
+        overlay = overlay_heatmap(orig_arr, heatmap)
 
         color = '#10b981' if is_correct else '#ef4444'
         label = '✓ BENAR' if is_correct else '✗ SALAH'
         title = f"{label}  |  Pred: {pred_lbl}  |  True: {true_lbl}  |  {conf:.1f}%"
 
-        axes[row_idx][0].imshow(img_arr)
+        axes[row_idx][0].imshow(orig_arr)
         axes[row_idx][1].imshow(heatmap, cmap='jet')
         axes[row_idx][2].imshow(overlay)
 
@@ -434,8 +412,8 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     st.markdown("##### 🔧 Konfigurasi Model")
-    use_resnet      = st.checkbox("ResNet50",       value=True)
-    use_efficientnet = st.checkbox("EfficientNetB0", value=True)
+    use_resnet       = st.checkbox("ResNet50",        value=True)
+    use_efficientnet = st.checkbox("EfficientNetB0",  value=True)
 
     st.markdown("---")
     st.markdown("##### 📊 Kelas Penyakit Retina")
@@ -486,7 +464,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — PREDIKSI GAMBAR (1 gambar → kedua model side-by-side)
+# TAB 1 — PREDIKSI GAMBAR
 # ══════════════════════════════════════════════════════════════════════════════
 with tab1:
     st.markdown("""
@@ -504,14 +482,10 @@ with tab1:
     uploaded = st.file_uploader("Upload gambar OCT (.jpg / .png)", type=["jpg", "jpeg", "png"])
 
     if not models:
-        st.warning("⚠️ Tidak ada model yang termuat. Pastikan URL Google Drive sudah benar di kode.")
-
+        st.warning("⚠️ Tidak ada model yang termuat.")
     elif uploaded:
-        pil_img  = Image.open(uploaded).convert("RGB")
-        img_arr  = preprocess_image(pil_img)
-        orig_arr = np.array(pil_img.resize(IMG_SIZE), dtype=np.float32) / 255.0
+        pil_img = Image.open(uploaded).convert("RGB")
 
-        # ── Gambar input ────────────────────────────────────────────────────
         st.markdown("---")
         img_col, info_col = st.columns([1, 3])
         with img_col:
@@ -530,11 +504,9 @@ with tab1:
 
         st.markdown("---")
 
-        # ── Prediksi Kedua Model Side-by-Side ──────────────────────────────
         model_list = list(models.items())
         n_models   = len(model_list)
 
-        # Header kolom per model
         if n_models == 2:
             cols_header = st.columns(2)
             for ci, (mname, _) in enumerate(model_list):
@@ -548,19 +520,22 @@ with tab1:
                                      font-weight:700;color:{color}'>{"🔵" if ci==0 else "🟣"} {mname}</span>
                     </div>
                     """, unsafe_allow_html=True)
-        
-        results = {}
+
+        results   = {}
         pred_cols = st.columns(n_models)
 
         for ci, (mname, model) in enumerate(model_list):
+            # ← Preprocessing sesuai model
+            preprocess_fn = get_preprocess_fn(mname)
+            img_arr       = preprocess_fn(pil_img)
+
             pred_idx, conf, probs = predict(model, img_arr)
             pred_label = CLASS_NAMES[pred_idx]
-            results[mname] = (pred_idx, conf, probs, pred_label)
+            results[mname] = (pred_idx, conf, probs, pred_label, img_arr)
             badge = render_badge(pred_label)
             color = '#00e5ff' if ci == 0 else '#a78bfa'
 
             with pred_cols[ci]:
-                # Card prediksi utama
                 st.markdown(f"""
                 <div style='background:var(--surface);border:1px solid {"rgba(0,229,255,0.15)" if ci==0 else "rgba(124,58,237,0.15)"};
                             border-radius:12px;padding:1.25rem;margin-bottom:0.75rem'>
@@ -574,19 +549,14 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Deskripsi kelas
                 st.caption(f"📌 {CLASS_DESC[pred_label]}")
 
-                # Bar probabilitas top-5
                 st.markdown(f"<div style='font-size:0.75rem;color:#64748b;margin:0.75rem 0 0.4rem'>Top-5 Probabilitas</div>",
                             unsafe_allow_html=True)
                 sorted_idx = np.argsort(probs)[::-1][:5]
                 for i in sorted_idx:
-                    bar_color = color if i == pred_idx else '#334155'
-                    st.progress(float(probs[i]),
-                                text=f"{CLASS_NAMES[i]}: {probs[i]*100:.1f}%")
+                    st.progress(float(probs[i]), text=f"{CLASS_NAMES[i]}: {probs[i]*100:.1f}%")
 
-        # ── Verdict: Apakah kedua model sepakat? ───────────────────────────
         if n_models == 2:
             labels = [r[3] for r in results.values()]
             if labels[0] == labels[1]:
@@ -602,7 +572,7 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                confs = [r[1] for r in results.values()]
+                confs  = [r[1] for r in results.values()]
                 mnames = list(results.keys())
                 st.markdown(f"""
                 <div style='background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);
@@ -617,15 +587,16 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
 
-        # ── Grad-CAM++ Side-by-Side ─────────────────────────────────────────
+        # Grad-CAM++ Side-by-Side
         st.markdown("---")
         st.markdown('<div class="card-title">🗺️ Grad-CAM++ — Perbandingan Visual Kedua Model</div>',
                     unsafe_allow_html=True)
 
         if st.button("🔍 Generate Grad-CAM++ Kedua Model"):
+            orig_arr  = np.array(pil_img.resize(IMG_SIZE), dtype=np.float32) / 255.0
             gcam_cols = st.columns(n_models)
             for ci, (mname, model) in enumerate(model_list):
-                pred_idx, conf, probs, pred_label = results[mname]
+                pred_idx, conf, probs, pred_label, img_arr = results[mname]
                 color = '#00e5ff' if ci == 0 else '#a78bfa'
                 with gcam_cols[ci]:
                     st.markdown(f"<div style='font-family:Space Mono,monospace;font-size:0.8rem;"
@@ -638,13 +609,12 @@ with tab1:
                             overlay    = overlay_heatmap(orig_arr, heatmap)
                             hm_color   = cm.jet(heatmap)[:, :, :3]
 
-                        st.image(orig_arr,   caption="Citra Asli",  use_container_width=True, clamp=True)
-                        st.image(hm_color,   caption="Heatmap",     use_container_width=True, clamp=True)
-                        st.image(overlay,    caption="Overlay",     use_container_width=True, clamp=True)
+                        st.image(orig_arr,  caption="Citra Asli",  use_container_width=True, clamp=True)
+                        st.image(hm_color,  caption="Heatmap",     use_container_width=True, clamp=True)
+                        st.image(overlay,   caption="Overlay",     use_container_width=True, clamp=True)
                         st.caption(f"Fokus perhatian: kelas **{pred_label}** ({conf:.1f}%)")
                     except Exception as e:
                         st.error(f"Gagal: {e}")
-
     else:
         st.markdown("""
         <div style='text-align:center;padding:3.5rem;color:#475569'>
@@ -658,7 +628,7 @@ with tab1:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — GRAD-CAM++ ANALYSIS: 5 Benar + 5 Salah (1 gambar at a time)
+# TAB 2 — GRAD-CAM++ ANALYSIS: 5 Benar + 5 Salah
 # ══════════════════════════════════════════════════════════════════════════════
 with tab2:
     st.markdown("""
@@ -676,16 +646,15 @@ with tab2:
     if not models:
         st.warning("⚠️ Tidak ada model yang termuat.")
     else:
-        # ── Pilih model untuk analisis Grad-CAM++ ──────────────────────────
         model_choice = st.selectbox(
             "🏆 Pilih model untuk analisis Grad-CAM++",
             list(models.keys()),
             help="Pilih model terbaik berdasarkan hasil evaluasimu"
         )
-        target_model = models[model_choice]
-        mc_color = '#00e5ff' if model_choice == 'ResNet50' else '#a78bfa'
+        target_model  = models[model_choice]
+        mc_color      = '#00e5ff' if model_choice == 'ResNet50' else '#a78bfa'
+        preprocess_fn = get_preprocess_fn(model_choice)
 
-        # ── Session state untuk kumpulkan kasus ────────────────────────────
         if 'correct_cases' not in st.session_state:
             st.session_state.correct_cases = []
         if 'wrong_cases' not in st.session_state:
@@ -693,13 +662,11 @@ with tab2:
         if 'last_model' not in st.session_state:
             st.session_state.last_model = model_choice
 
-        # Reset jika ganti model
         if st.session_state.last_model != model_choice:
             st.session_state.correct_cases = []
             st.session_state.wrong_cases   = []
             st.session_state.last_model    = model_choice
 
-        # ── Progress kumpul kasus ───────────────────────────────────────────
         n_correct = len(st.session_state.correct_cases)
         n_wrong   = len(st.session_state.wrong_cases)
 
@@ -726,7 +693,6 @@ with tab2:
         st.progress(min((n_correct + n_wrong) / 10, 1.0),
                     text=f"Terkumpul {n_correct + n_wrong}/10 kasus")
 
-        # Reset button
         if st.button("🔄 Reset Semua Kasus"):
             st.session_state.correct_cases = []
             st.session_state.wrong_cases   = []
@@ -734,7 +700,6 @@ with tab2:
 
         st.markdown("---")
 
-        # ── Upload 1 gambar + pilih true label ─────────────────────────────
         still_need_correct = n_correct < 5
         still_need_wrong   = n_wrong < 5
 
@@ -757,17 +722,16 @@ with tab2:
                 )
 
             if sample_file:
-                pil_img  = Image.open(sample_file).convert("RGB")
-                img_arr  = preprocess_image(pil_img)
-                orig_arr = np.array(pil_img.resize(IMG_SIZE), dtype=np.float32) / 255.0
+                pil_img = Image.open(sample_file).convert("RGB")
+                # ← Preprocessing sesuai model yang dipilih
+                img_arr = preprocess_fn(pil_img)
 
                 pred_idx, conf, probs = predict(target_model, img_arr)
                 pred_label = CLASS_NAMES[pred_idx]
                 is_correct = (pred_label == true_label)
 
-                # Tampilkan hasil prediksi
-                res_color = '#10b981' if is_correct else '#ef4444'
-                res_label = '✓ PREDIKSI BENAR' if is_correct else '✗ PREDIKSI SALAH'
+                res_color  = '#10b981' if is_correct else '#ef4444'
+                res_label  = '✓ PREDIKSI BENAR' if is_correct else '✗ PREDIKSI SALAH'
                 pred_badge = render_badge(pred_label)
                 true_badge = render_badge(true_label)
 
@@ -798,16 +762,14 @@ with tab2:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # Top-5 probabilitas
                     st.markdown("<div style='font-size:0.73rem;color:#64748b;margin-top:0.75rem'>Top-5 Probabilitas</div>",
                                 unsafe_allow_html=True)
                     for i in np.argsort(probs)[::-1][:5]:
                         st.progress(float(probs[i]), text=f"{CLASS_NAMES[i]}: {probs[i]*100:.1f}%")
 
-                # Tombol simpan
                 can_add = (is_correct and still_need_correct) or (not is_correct and still_need_wrong)
                 if can_add:
-                    entry = (pil_img, true_label, pred_label, conf)
+                    entry     = (pil_img, true_label, pred_label, conf)
                     btn_label = f"➕ Simpan sebagai {'Prediksi Benar' if is_correct else 'Prediksi Salah'}"
                     if st.button(btn_label, key=f"btn_save_{n_correct}_{n_wrong}"):
                         if is_correct:
@@ -819,11 +781,9 @@ with tab2:
                     st.info("✅ Sudah cukup 5 prediksi benar. Upload gambar yang salah diprediksi.")
                 elif not is_correct and not still_need_wrong:
                     st.info("✅ Sudah cukup 5 prediksi salah. Upload gambar yang benar diprediksi.")
-
         else:
             st.success("🎉 Sudah terkumpul 5 prediksi benar + 5 prediksi salah! Siap generate Grad-CAM++.")
 
-        # ── Tampilkan kasus yang sudah terkumpul ───────────────────────────
         if n_correct > 0 or n_wrong > 0:
             st.markdown("---")
             st.markdown('<div class="card-title">📋 Kasus yang Sudah Terkumpul</div>',
@@ -865,18 +825,15 @@ with tab2:
                 st.markdown(render_case_table(st.session_state.wrong_cases, False),
                             unsafe_allow_html=True)
 
-        # ── Generate Grad-CAM++ ─────────────────────────────────────────────
         if n_correct >= 1 and n_wrong >= 1:
             st.markdown("---")
-            if st.button(f"🚀 Generate Analisis Grad-CAM++ — {model_choice}",
-                         disabled=(n_correct == 0 and n_wrong == 0)):
-                all_cases    = st.session_state.correct_cases + st.session_state.wrong_cases
-                n_c          = len(st.session_state.correct_cases)
-                n_w          = len(st.session_state.wrong_cases)
-                avg_conf_c   = np.mean([c[3] for c in st.session_state.correct_cases]) if n_c > 0 else 0
-                avg_conf_w   = np.mean([c[3] for c in st.session_state.wrong_cases])   if n_w > 0 else 0
+            if st.button(f"🚀 Generate Analisis Grad-CAM++ — {model_choice}"):
+                n_c         = len(st.session_state.correct_cases)
+                n_w         = len(st.session_state.wrong_cases)
+                avg_conf_c  = np.mean([c[3] for c in st.session_state.correct_cases]) if n_c > 0 else 0
+                avg_conf_w  = np.mean([c[3] for c in st.session_state.wrong_cases])   if n_w > 0 else 0
                 wrong_classes = [c[1] for c in st.session_state.wrong_cases]
-                most_wrong   = max(set(wrong_classes), key=wrong_classes.count) if wrong_classes else "-"
+                most_wrong  = max(set(wrong_classes), key=wrong_classes.count) if wrong_classes else "-"
 
                 with st.spinner(f"Menghitung Grad-CAM++ — {model_choice}..."):
                     try:
@@ -885,11 +842,10 @@ with tab2:
                             model_choice,
                             st.session_state.correct_cases,
                             st.session_state.wrong_cases,
-                            target_model, layer_name
+                            target_model, layer_name, preprocess_fn
                         )
                         if fig:
                             st.pyplot(fig, use_container_width=True)
-
                             st.markdown(f"""
                             <div class="analysis-box">
                                 <strong style='color:#00e5ff'>
@@ -900,7 +856,6 @@ with tab2:
                                 benar dengan rata-rata confidence <strong>{avg_conf_c:.1f}%</strong> dan 
                                 <strong>{n_w}</strong> prediksi salah dengan rata-rata confidence 
                                 <strong>{avg_conf_w:.1f}%</strong>.<br><br>
-
                                 Hasil Grad-CAM++ menunjukkan bahwa model lebih banyak memfokuskan perhatian 
                                 pada <strong>area lesi retina yang mengalami perubahan tekstur dan 
                                 reflektivitas jaringan</strong>, seperti akumulasi cairan subretinal, 
@@ -908,14 +863,12 @@ with tab2:
                                 neovaskularisasi koroidal. Hal ini menunjukkan bahwa model telah mempelajari 
                                 karakteristik visual yang relevan secara klinis dengan diagnosis penyakit 
                                 retina pada citra OCT.<br><br>
-
                                 Pada kasus prediksi yang salah, heatmap cenderung menyebar ke area yang 
                                 kurang representatif — khususnya pada kelas <strong>{most_wrong}</strong> 
                                 yang memiliki fitur visual yang mirip dengan kelas lain, mengindikasikan 
                                 potensi area peningkatan model di masa mendatang.
                             </div>
                             """, unsafe_allow_html=True)
-
                     except Exception as e:
                         st.error(f"Gagal generate Grad-CAM++: {e}")
 
@@ -926,7 +879,6 @@ with tab2:
 with tab3:
     st.markdown('<div class="card-title">📊 Perbandingan Arsitektur Model</div>', unsafe_allow_html=True)
 
-    # Tabel perbandingan arsitektur (static info)
     st.markdown("""
     <div class="card">
     <table style='width:100%;border-collapse:collapse;font-size:0.85rem'>
@@ -973,7 +925,6 @@ with tab3:
     </div>
     """, unsafe_allow_html=True)
 
-    # Input metrik evaluasi manual
     st.markdown('<div class="card-title" style="margin-top:1.5rem">📈 Masukkan Metrik Evaluasi Model</div>',
                 unsafe_allow_html=True)
     st.caption("Isi dengan hasil training/evaluasi dari notebook kamu")
@@ -981,30 +932,30 @@ with tab3:
     col_r, col_e = st.columns(2)
     with col_r:
         st.markdown("**ResNet50**")
-        r_acc   = st.number_input("Accuracy (%)",    min_value=0.0, max_value=100.0, value=91.2, step=0.1, key="r_acc")
-        r_prec  = st.number_input("Precision (%)",   min_value=0.0, max_value=100.0, value=90.5, step=0.1, key="r_prec")
-        r_rec   = st.number_input("Recall (%)",      min_value=0.0, max_value=100.0, value=89.8, step=0.1, key="r_rec")
-        r_f1    = st.number_input("F1-Score (%)",    min_value=0.0, max_value=100.0, value=90.1, step=0.1, key="r_f1")
-        r_auc   = st.number_input("AUC-ROC (%)",     min_value=0.0, max_value=100.0, value=96.3, step=0.1, key="r_auc")
+        r_acc  = st.number_input("Accuracy (%)",  min_value=0.0, max_value=100.0, value=93.0, step=0.1, key="r_acc")
+        r_prec = st.number_input("Precision (%)", min_value=0.0, max_value=100.0, value=93.0, step=0.1, key="r_prec")
+        r_rec  = st.number_input("Recall (%)",    min_value=0.0, max_value=100.0, value=93.0, step=0.1, key="r_rec")
+        r_f1   = st.number_input("F1-Score (%)",  min_value=0.0, max_value=100.0, value=93.0, step=0.1, key="r_f1")
+        r_auc  = st.number_input("AUC-ROC (%)",   min_value=0.0, max_value=100.0, value=96.0, step=0.1, key="r_auc")
     with col_e:
         st.markdown("**EfficientNetB0**")
-        e_acc   = st.number_input("Accuracy (%)",    min_value=0.0, max_value=100.0, value=93.8, step=0.1, key="e_acc")
-        e_prec  = st.number_input("Precision (%)",   min_value=0.0, max_value=100.0, value=93.1, step=0.1, key="e_prec")
-        e_rec   = st.number_input("Recall (%)",      min_value=0.0, max_value=100.0, value=92.6, step=0.1, key="e_rec")
-        e_f1    = st.number_input("F1-Score (%)",    min_value=0.0, max_value=100.0, value=92.8, step=0.1, key="e_f1")
-        e_auc   = st.number_input("AUC-ROC (%)",     min_value=0.0, max_value=100.0, value=97.1, step=0.1, key="e_auc")
+        e_acc  = st.number_input("Accuracy (%)",  min_value=0.0, max_value=100.0, value=89.0, step=0.1, key="e_acc")
+        e_prec = st.number_input("Precision (%)", min_value=0.0, max_value=100.0, value=89.0, step=0.1, key="e_prec")
+        e_rec  = st.number_input("Recall (%)",    min_value=0.0, max_value=100.0, value=89.0, step=0.1, key="e_rec")
+        e_f1   = st.number_input("F1-Score (%)",  min_value=0.0, max_value=100.0, value=89.0, step=0.1, key="e_f1")
+        e_auc  = st.number_input("AUC-ROC (%)",   min_value=0.0, max_value=100.0, value=97.0, step=0.1, key="e_auc")
 
     if st.button("📊 Tampilkan Grafik Perbandingan"):
-        metrics      = ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'AUC-ROC']
-        resnet_vals  = [r_acc, r_prec, r_rec, r_f1, r_auc]
-        effnet_vals  = [e_acc, e_prec, e_rec, e_f1, e_auc]
+        metrics     = ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'AUC-ROC']
+        resnet_vals = [r_acc, r_prec, r_rec, r_f1, r_auc]
+        effnet_vals = [e_acc, e_prec, e_rec, e_f1, e_auc]
 
-        x  = np.arange(len(metrics))
-        w  = 0.35
+        x = np.arange(len(metrics))
+        w = 0.35
 
         fig, ax = plt.subplots(figsize=(10, 5), facecolor='#111827')
         ax.set_facecolor('#111827')
-        bars1 = ax.bar(x - w/2, resnet_vals,  w, label='ResNet50',       color='#00e5ff', alpha=0.85)
+        bars1 = ax.bar(x - w/2, resnet_vals, w, label='ResNet50',       color='#00e5ff', alpha=0.85)
         bars2 = ax.bar(x + w/2, effnet_vals, w, label='EfficientNetB0', color='#7c3aed', alpha=0.85)
 
         ax.set_xticks(x)
@@ -1033,9 +984,8 @@ with tab3:
 
         st.pyplot(fig, use_container_width=True)
 
-        # Kesimpulan otomatis
-        winner = "EfficientNetB0" if e_acc > r_acc else "ResNet50"
-        diff   = abs(e_acc - r_acc)
+        winner = "ResNet50" if r_acc > e_acc else "EfficientNetB0"
+        diff   = abs(r_acc - e_acc)
         st.markdown(f"""
         <div class="analysis-box">
             <strong style='color:#00e5ff'>📋 Kesimpulan Perbandingan</strong><br><br>
