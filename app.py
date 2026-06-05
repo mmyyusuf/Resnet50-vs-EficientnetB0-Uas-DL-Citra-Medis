@@ -219,21 +219,28 @@ div[data-testid="stFileUploader"] {
 """, unsafe_allow_html=True)
 
 # ─── Konstanta ─────────────────────────────────────────────────────────────────
-CLASS_NAMES = ['CNV', 'DME', 'DRUSEN', 'NORMAL', 'MH', 'DR', 'SCR', 'AMD']
+CLASS_NAMES = ['CNV', 'DR', 'CSR', 'MH', 'AMD', 'DRUSEN', 'DME', 'NORMAL']
+
 CLASS_BADGE = {
-    'CNV': 'badge-cnv', 'DME': 'badge-dme', 'DRUSEN': 'badge-drusen',
-    'NORMAL': 'badge-normal', 'MH': 'badge-mh', 'DR': 'badge-dr',
-    'SCR': 'badge-scr', 'AMD': 'badge-amd'
+    'CNV':    'badge-cnv',
+    'DR':     'badge-dr',
+    'CSR':    'badge-scr',   # pakai style yang sama
+    'MH':     'badge-mh',
+    'AMD':    'badge-amd',
+    'DRUSEN': 'badge-drusen',
+    'DME':    'badge-dme',
+    'NORMAL': 'badge-normal',
 }
+
 CLASS_DESC = {
     'CNV':    'Choroidal Neovascularization – pertumbuhan pembuluh darah abnormal di bawah retina.',
-    'DME':    'Diabetic Macular Edema – pembengkakan makula akibat komplikasi diabetes.',
-    'DRUSEN': 'Drusen – endapan lipid/protein di bawah epitel pigmen retina.',
-    'NORMAL': 'Retina sehat tanpa tanda-tanda patologi.',
-    'MH':     'Macular Hole – lubang kecil di pusat makula (fovea).',
     'DR':     'Diabetic Retinopathy – kerusakan pembuluh darah retina akibat diabetes.',
-    'SCR':    'Serous Chorioretinopathy – akumulasi cairan serosa di bawah retina.',
+    'CSR':    'Central Serous Retinopathy – akumulasi cairan serosa di bawah retina.',
+    'MH':     'Macular Hole – lubang kecil di pusat makula (fovea).',
     'AMD':    'Age-related Macular Degeneration – degenerasi makula terkait usia.',
+    'DRUSEN': 'Drusen – endapan lipid/protein di bawah epitel pigmen retina.',
+    'DME':    'Diabetic Macular Edema – pembengkakan makula akibat komplikasi diabetes.',
+    'NORMAL': 'Retina sehat tanpa tanda-tanda patologi.',
 }
 IMG_SIZE = (224, 224)
 
