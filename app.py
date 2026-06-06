@@ -255,7 +255,6 @@ def load_model_from_drive(url: str, filename: str):
 
 
 def preprocess_resnet(img: Image.Image) -> np.ndarray:
-    """Preprocess untuk ResNet50 — pakai resnet50 preprocess_input."""
     img = img.convert("RGB").resize(IMG_SIZE)
     arr = np.array(img, dtype=np.float32)
     arr = resnet_preprocess(arr)
@@ -263,7 +262,6 @@ def preprocess_resnet(img: Image.Image) -> np.ndarray:
 
 
 def preprocess_effnet(img: Image.Image) -> np.ndarray:
-    """Preprocess untuk EfficientNetB0 — pakai efficientnet preprocess_input."""
     img = img.convert("RGB").resize(IMG_SIZE)
     arr = np.array(img, dtype=np.float32)
     arr = effnet_preprocess(arr)
@@ -271,59 +269,106 @@ def preprocess_effnet(img: Image.Image) -> np.ndarray:
 
 
 def get_preprocess_fn(model_name: str):
-    """Return fungsi preprocess yang sesuai berdasarkan nama model."""
     if model_name == 'ResNet50':
         return preprocess_resnet
     else:
         return preprocess_effnet
 
 
-def get_last_conv_layer(model) -> str:
+def get_last_conv_layer(model, model_name: str = "") -> str:
+    """
+    Cari conv layer terbaik untuk Grad-CAM++.
+    - ResNet50      → conv5_block3_3_conv (feature map akhir block5)
+    - EfficientNetB0→ top_conv (feature map sebelum global pooling)
+    - Fallback      → Conv2D terakhir dengan kernel > 1x1
+    """
+    preferred = {
+        'ResNet50':       ['conv5_block3_3_conv', 'conv5_block3_2_conv', 'conv5_block3_1_conv'],
+        'EfficientNetB0': ['top_conv', 'block7a_project_conv', 'block6d_project_conv'],
+    }
+    if model_name in preferred:
+        for target in preferred[model_name]:
+            try:
+                model.get_layer(target)
+                return target
+            except ValueError:
+                continue
+
+    # Fallback: Conv2D dengan kernel > 1x1
+    for layer in reversed(model.layers):
+        if isinstance(layer, tf.keras.layers.Conv2D):
+            cfg = layer.get_config()
+            ks  = cfg.get('kernel_size', (1, 1))
+            k   = ks[0] if isinstance(ks, (list, tuple)) else ks
+            if k > 1:
+                return layer.name
+
+    # Last resort
     for layer in reversed(model.layers):
         if isinstance(layer, tf.keras.layers.Conv2D):
             return layer.name
+
     raise ValueError("Tidak ditemukan layer Conv2D dalam model.")
 
 
 def grad_cam_plusplus(model, img_array: np.ndarray, class_idx: int, layer_name: str) -> np.ndarray:
+    """
+    Grad-CAM++ yang benar:
+    - Semua tape watch conv_out sejak awal
+    - Gradient orde-2 & orde-3 dihitung independen terhadap loss (bukan berantai)
+    """
     grad_model = tf.keras.models.Model(
         inputs=model.inputs,
         outputs=[model.get_layer(layer_name).output, model.output]
     )
-    with tf.GradientTape(persistent=True) as tape2:
-        with tf.GradientTape(persistent=True) as tape1:
-            with tf.GradientTape() as tape0:
-                inputs = tf.cast(img_array, tf.float32)
+
+    inputs = tf.cast(img_array, tf.float32)
+
+    with tf.GradientTape() as tape3:
+        with tf.GradientTape() as tape2:
+            with tf.GradientTape() as tape1:
                 conv_out, preds = grad_model(inputs)
+                # Semua tape harus watch conv_out secara eksplisit
+                tape1.watch(conv_out)
+                tape2.watch(conv_out)
+                tape3.watch(conv_out)
                 loss = preds[:, class_idx]
-            grads1 = tape0.gradient(loss, conv_out)
-        grads2 = tape1.gradient(grads1, conv_out)
-    grads3 = tape2.gradient(grads2, conv_out)
+            grads1 = tape1.gradient(loss, conv_out)   # dL/dA
+        grads2 = tape2.gradient(grads1, conv_out)     # d²L/dA²
+    grads3 = tape3.gradient(grads2, conv_out)         # d³L/dA³
 
-    conv_out  = conv_out[0]
-    grads1    = grads1[0]
-    grads2    = grads2[0]
-    grads3    = grads3[0]
+    # Lepas dimensi batch
+    conv_out_val = conv_out[0]    # (H, W, C)
+    grads1_val   = grads1[0]
+    grads2_val   = grads2[0]
+    grads3_val   = grads3[0]
 
-    global_sum  = tf.reduce_sum(conv_out, axis=(0, 1))
-    alpha_num   = grads2
-    alpha_denom = 2.0 * grads2 + grads3 * global_sum[tf.newaxis, tf.newaxis, :]
-    alpha_denom = tf.where(tf.equal(alpha_denom, 0), tf.ones_like(alpha_denom), alpha_denom)
+    # Alpha Grad-CAM++
+    global_sum  = tf.reduce_sum(conv_out_val, axis=(0, 1))   # (C,)
+    alpha_num   = grads2_val
+    alpha_denom = (2.0 * grads2_val
+                   + grads3_val * global_sum[tf.newaxis, tf.newaxis, :])
+    alpha_denom = tf.where(
+        tf.abs(alpha_denom) < 1e-7,
+        tf.ones_like(alpha_denom),
+        alpha_denom
+    )
     alphas  = alpha_num / alpha_denom
-    weights = tf.reduce_sum(tf.nn.relu(grads1) * alphas, axis=(0, 1))
-    cam     = tf.reduce_sum(weights * conv_out, axis=-1)
+    weights = tf.reduce_sum(tf.nn.relu(grads1_val) * alphas, axis=(0, 1))  # (C,)
+    cam     = tf.reduce_sum(weights * conv_out_val, axis=-1)                # (H, W)
     cam     = tf.nn.relu(cam).numpy()
 
     cam = cv2.resize(cam, IMG_SIZE)
-    cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-8)
+    cam_min, cam_max = cam.min(), cam.max()
+    cam = (cam - cam_min) / (cam_max - cam_min + 1e-8) if cam_max - cam_min > 1e-8 else np.zeros_like(cam)
     return cam
 
 
 def overlay_heatmap(original: np.ndarray, heatmap: np.ndarray, alpha: float = 0.45):
-    heatmap_color = cm.jet(heatmap)[:, :, :3]
-    heatmap_color = (heatmap_color * 255).astype(np.uint8)
+    heatmap_color  = cm.jet(heatmap)[:, :, :3]
+    heatmap_color  = (heatmap_color * 255).astype(np.uint8)
     original_uint8 = (original * 255).astype(np.uint8)
-    overlay = cv2.addWeighted(original_uint8, 1 - alpha, heatmap_color, alpha, 0)
+    overlay        = cv2.addWeighted(original_uint8, 1 - alpha, heatmap_color, alpha, 0)
     return overlay
 
 
@@ -366,12 +411,9 @@ def generate_gradcam_analysis(model_name: str, correct_cases, wrong_cases,
 
     for row_idx, (pil_img, true_lbl, pred_lbl, conf) in enumerate(correct_cases + wrong_cases):
         is_correct = row_idx < n_correct
-
-        # Preprocess sesuai model
-        inp      = preprocess_fn(pil_img)
-        # Untuk display tetap pakai /255
-        orig_arr = np.array(pil_img.convert("RGB").resize(IMG_SIZE), dtype=np.float32) / 255.0
-        pred_idx = CLASS_NAMES.index(pred_lbl)
+        inp        = preprocess_fn(pil_img)
+        orig_arr   = np.array(pil_img.convert("RGB").resize(IMG_SIZE), dtype=np.float32) / 255.0
+        pred_idx   = CLASS_NAMES.index(pred_lbl)
 
         heatmap = grad_cam_plusplus(model, inp, pred_idx, layer_name)
         overlay = overlay_heatmap(orig_arr, heatmap)
@@ -525,7 +567,6 @@ with tab1:
         pred_cols = st.columns(n_models)
 
         for ci, (mname, model) in enumerate(model_list):
-            # ← Preprocessing sesuai model
             preprocess_fn = get_preprocess_fn(mname)
             img_arr       = preprocess_fn(pil_img)
 
@@ -551,7 +592,7 @@ with tab1:
 
                 st.caption(f"📌 {CLASS_DESC[pred_label]}")
 
-                st.markdown(f"<div style='font-size:0.75rem;color:#64748b;margin:0.75rem 0 0.4rem'>Top-5 Probabilitas</div>",
+                st.markdown("<div style='font-size:0.75rem;color:#64748b;margin:0.75rem 0 0.4rem'>Top-5 Probabilitas</div>",
                             unsafe_allow_html=True)
                 sorted_idx = np.argsort(probs)[::-1][:5]
                 for i in sorted_idx:
@@ -587,7 +628,6 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
 
-        # Grad-CAM++ Side-by-Side
         st.markdown("---")
         st.markdown('<div class="card-title">🗺️ Grad-CAM++ — Perbandingan Visual Kedua Model</div>',
                     unsafe_allow_html=True)
@@ -604,7 +644,7 @@ with tab1:
                                 unsafe_allow_html=True)
                     try:
                         with st.spinner(f"Menghitung {mname}..."):
-                            layer_name = get_last_conv_layer(model)
+                            layer_name = get_last_conv_layer(model, mname)
                             heatmap    = grad_cam_plusplus(model, img_arr, pred_idx, layer_name)
                             overlay    = overlay_heatmap(orig_arr, heatmap)
                             hm_color   = cm.jet(heatmap)[:, :, :3]
@@ -612,7 +652,7 @@ with tab1:
                         st.image(orig_arr,  caption="Citra Asli",  use_container_width=True, clamp=True)
                         st.image(hm_color,  caption="Heatmap",     use_container_width=True, clamp=True)
                         st.image(overlay,   caption="Overlay",     use_container_width=True, clamp=True)
-                        st.caption(f"Fokus perhatian: kelas **{pred_label}** ({conf:.1f}%)")
+                        st.caption(f"Layer: `{layer_name}` · Fokus: **{pred_label}** ({conf:.1f}%)")
                     except Exception as e:
                         st.error(f"Gagal: {e}")
     else:
@@ -646,7 +686,7 @@ with tab2:
     if not models:
         st.warning("⚠️ Tidak ada model yang termuat.")
     else:
-        model_choice = st.selectbox(
+        model_choice  = st.selectbox(
             "🏆 Pilih model untuk analisis Grad-CAM++",
             list(models.keys()),
             help="Pilih model terbaik berdasarkan hasil evaluasimu"
@@ -723,7 +763,6 @@ with tab2:
 
             if sample_file:
                 pil_img = Image.open(sample_file).convert("RGB")
-                # ← Preprocessing sesuai model yang dipilih
                 img_arr = preprocess_fn(pil_img)
 
                 pred_idx, conf, probs = predict(target_model, img_arr)
@@ -828,16 +867,17 @@ with tab2:
         if n_correct >= 1 and n_wrong >= 1:
             st.markdown("---")
             if st.button(f"🚀 Generate Analisis Grad-CAM++ — {model_choice}"):
-                n_c         = len(st.session_state.correct_cases)
-                n_w         = len(st.session_state.wrong_cases)
-                avg_conf_c  = np.mean([c[3] for c in st.session_state.correct_cases]) if n_c > 0 else 0
-                avg_conf_w  = np.mean([c[3] for c in st.session_state.wrong_cases])   if n_w > 0 else 0
+                n_c           = len(st.session_state.correct_cases)
+                n_w           = len(st.session_state.wrong_cases)
+                avg_conf_c    = np.mean([c[3] for c in st.session_state.correct_cases]) if n_c > 0 else 0
+                avg_conf_w    = np.mean([c[3] for c in st.session_state.wrong_cases])   if n_w > 0 else 0
                 wrong_classes = [c[1] for c in st.session_state.wrong_cases]
-                most_wrong  = max(set(wrong_classes), key=wrong_classes.count) if wrong_classes else "-"
+                most_wrong    = max(set(wrong_classes), key=wrong_classes.count) if wrong_classes else "-"
 
                 with st.spinner(f"Menghitung Grad-CAM++ — {model_choice}..."):
                     try:
-                        layer_name = get_last_conv_layer(target_model)
+                        layer_name = get_last_conv_layer(target_model, model_choice)
+                        st.caption(f"Layer target: `{layer_name}`")
                         fig = generate_gradcam_analysis(
                             model_choice,
                             st.session_state.correct_cases,
