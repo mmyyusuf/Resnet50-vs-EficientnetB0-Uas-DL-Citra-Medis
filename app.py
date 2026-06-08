@@ -211,7 +211,7 @@ div[data-testid="stFileUploader"] {
 
 # ─── Konstanta ─────────────────────────────────────────────────────────────────
 # Urutan sesuai training: os.listdir train_path
-CLASS_NAMES = ['CNV', 'DR', 'CSR', 'MH', 'AMD', 'DRUSEN', 'DME', 'NORMAL']
+CLASS_NAMES = ['AMD', 'CNV', 'CSR', 'DME', 'DR', 'DRUSEN', 'MH', 'NORMAL']
 
 CLASS_BADGE = {
     'CNV':    'badge-cnv',
@@ -917,18 +917,197 @@ with tab2:
 # TAB 3 — PERBANDINGAN MODEL
 # ══════════════════════════════════════════════════════════════════════════════
 with tab3:
-    st.markdown('<div class="card-title">📊 Perbandingan Arsitektur Model</div>', unsafe_allow_html=True)
+    # ── Data hasil evaluasi dari classification report ─────────────────────
+    # ResNet50
+    R_CLASSES   = ['AMD','CNV','CSR','DME','DR','DRUSEN','MH','NORMAL']
+    R_PRECISION = [1.00, 0.85, 0.99, 0.96, 0.99, 0.86, 1.00, 0.80]
+    R_RECALL    = [1.00, 0.90, 1.00, 0.83, 0.99, 0.75, 0.99, 0.97]
+    R_F1        = [1.00, 0.88, 1.00, 0.89, 0.99, 0.80, 1.00, 0.88]
+    R_ACC, R_PREC_MACRO, R_REC_MACRO, R_F1_MACRO = 93.0, 93.0, 93.0, 93.0
 
+    # EfficientNetB0
+    E_PRECISION = [1.00, 0.82, 0.95, 0.82, 0.90, 0.79, 1.00, 0.83]
+    E_RECALL    = [0.99, 0.82, 0.98, 0.87, 0.97, 0.68, 0.88, 0.91]
+    E_F1        = [0.99, 0.82, 0.96, 0.85, 0.93, 0.73, 0.93, 0.87]
+    E_ACC, E_PREC_MACRO, E_REC_MACRO, E_F1_MACRO = 89.0, 89.0, 89.0, 89.0
+
+    winner = "ResNet50" if R_ACC > E_ACC else "EfficientNetB0"
+    diff   = abs(R_ACC - E_ACC)
+
+    # ── Header ─────────────────────────────────────────────────────────────
+    st.markdown('<div class="card-title">📊 Perbandingan Arsitektur & Evaluasi Model</div>',
+                unsafe_allow_html=True)
+
+    # ── Banner pemenang ─────────────────────────────────────────────────────
+    st.markdown(f"""
+    <div style='background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(0,229,255,0.08));
+                border:1px solid rgba(16,185,129,0.35);border-radius:12px;
+                padding:1.1rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1rem'>
+        <div style='font-size:2rem'>🏆</div>
+        <div>
+            <div style='font-size:0.7rem;color:#64748b;text-transform:uppercase;letter-spacing:0.08em'>
+                Model Terbaik — Test Set
+            </div>
+            <div style='font-family:Space Mono,monospace;font-size:1.25rem;
+                        color:#10b981;font-weight:700;margin:0.15rem 0'>{winner}</div>
+            <div style='font-size:0.82rem;color:#94a3b8'>
+                Accuracy <strong style='color:#10b981'>{max(R_ACC,E_ACC):.1f}%</strong>
+                &nbsp;·&nbsp; unggul <strong style='color:#10b981'>{diff:.1f}%</strong>
+                dari model lainnya
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Overall metrics side-by-side ────────────────────────────────────────
+    m1, m2, m3, m4, m5, m6, m7, m8 = st.columns(8)
+    def metric_pair(col, label, rv, ev):
+        best_color = '#10b981' if rv >= ev else '#a78bfa'
+        col.markdown(f"""
+        <div style='background:#111827;border-radius:8px;padding:0.6rem 0.5rem;text-align:center;
+                    border:1px solid rgba(255,255,255,0.06)'>
+            <div style='font-size:0.6rem;color:#475569;text-transform:uppercase;letter-spacing:0.05em;
+                        margin-bottom:0.3rem'>{label}</div>
+            <div style='font-family:Space Mono,monospace;font-size:0.85rem;color:#00e5ff;font-weight:700'>
+                {rv:.1f}%</div>
+            <div style='font-size:0.55rem;color:#334155;margin:0.1rem 0'>vs</div>
+            <div style='font-family:Space Mono,monospace;font-size:0.85rem;color:#a78bfa;font-weight:700'>
+                {ev:.1f}%</div>
+        </div>""", unsafe_allow_html=True)
+
+    metric_pair(m1, "Accuracy",  R_ACC,        E_ACC)
+    metric_pair(m2, "Precision", R_PREC_MACRO, E_PREC_MACRO)
+    metric_pair(m3, "Recall",    R_REC_MACRO,  E_REC_MACRO)
+    metric_pair(m4, "F1-Score",  R_F1_MACRO,   E_F1_MACRO)
+    st.markdown("<div style='font-size:0.7rem;color:#475569;margin:0.3rem 0 1rem'>"\
+                "🔵 ResNet50 &nbsp;·&nbsp; 🟣 EfficientNetB0</div>", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Grafik 1: Overall metrics bar chart ────────────────────────────────
+    st.markdown('<div class="card-title">📈 Grafik Perbandingan Metrik Keseluruhan</div>',
+                unsafe_allow_html=True)
+
+    metrics_overall = ['Accuracy', 'Precision', 'Recall', 'F1-Score']
+    r_vals = [R_ACC, R_PREC_MACRO, R_REC_MACRO, R_F1_MACRO]
+    e_vals = [E_ACC, E_PREC_MACRO, E_REC_MACRO, E_F1_MACRO]
+    x = np.arange(len(metrics_overall))
+    w = 0.35
+
+    fig1, ax1 = plt.subplots(figsize=(8, 4), facecolor='#111827')
+    ax1.set_facecolor('#111827')
+    b1 = ax1.bar(x - w/2, r_vals, w, label='ResNet50',       color='#00e5ff', alpha=0.85)
+    b2 = ax1.bar(x + w/2, e_vals, w, label='EfficientNetB0', color='#7c3aed', alpha=0.85)
+    ax1.set_xticks(x); ax1.set_xticklabels(metrics_overall, color='#94a3b8', fontsize=9)
+    ax1.set_ylim(80, 100); ax1.set_ylabel('Score (%)', color='#64748b', fontsize=9)
+    ax1.tick_params(colors='#64748b')
+    for sp in ['top','right']: ax1.spines[sp].set_visible(False)
+    for sp in ['bottom','left']: ax1.spines[sp].set_color('#1e293b')
+    ax1.yaxis.grid(True, color='#1e293b', linewidth=0.5); ax1.set_axisbelow(True)
+    ax1.legend(facecolor='#1a2235', edgecolor='#334155', labelcolor='#94a3b8', fontsize=9)
+    ax1.set_title("Overall Metrics — ResNet50 vs EfficientNetB0",
+                  color='#e2e8f0', fontsize=10, pad=10)
+    for bar in b1:
+        ax1.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.15,
+                 f'{bar.get_height():.1f}', ha='center', va='bottom',
+                 color='#00e5ff', fontsize=8, fontweight='bold')
+    for bar in b2:
+        ax1.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.15,
+                 f'{bar.get_height():.1f}', ha='center', va='bottom',
+                 color='#a78bfa', fontsize=8, fontweight='bold')
+    plt.tight_layout()
+    st.pyplot(fig1, use_container_width=True)
+
+    st.markdown("---")
+
+    # ── Grafik 2: Per-class F1-Score ────────────────────────────────────────
+    st.markdown('<div class="card-title">📊 F1-Score Per Kelas Penyakit</div>',
+                unsafe_allow_html=True)
+
+    x2 = np.arange(len(R_CLASSES))
+    fig2, ax2 = plt.subplots(figsize=(11, 4.5), facecolor='#111827')
+    ax2.set_facecolor('#111827')
+    b3 = ax2.bar(x2 - w/2, [v*100 for v in R_F1], w, label='ResNet50',       color='#00e5ff', alpha=0.85)
+    b4 = ax2.bar(x2 + w/2, [v*100 for v in E_F1], w, label='EfficientNetB0', color='#7c3aed', alpha=0.85)
+    ax2.set_xticks(x2); ax2.set_xticklabels(R_CLASSES, color='#94a3b8', fontsize=9)
+    ax2.set_ylim(60, 105); ax2.set_ylabel('F1-Score (%)', color='#64748b', fontsize=9)
+    ax2.tick_params(colors='#64748b')
+    for sp in ['top','right']: ax2.spines[sp].set_visible(False)
+    for sp in ['bottom','left']: ax2.spines[sp].set_color('#1e293b')
+    ax2.yaxis.grid(True, color='#1e293b', linewidth=0.5); ax2.set_axisbelow(True)
+    ax2.legend(facecolor='#1a2235', edgecolor='#334155', labelcolor='#94a3b8', fontsize=9)
+    ax2.set_title("F1-Score Per Kelas — ResNet50 vs EfficientNetB0",
+                  color='#e2e8f0', fontsize=10, pad=10)
+    for bar in b3:
+        ax2.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.3,
+                 f'{bar.get_height():.0f}', ha='center', va='bottom',
+                 color='#00e5ff', fontsize=7, fontweight='bold')
+    for bar in b4:
+        ax2.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.3,
+                 f'{bar.get_height():.0f}', ha='center', va='bottom',
+                 color='#a78bfa', fontsize=7, fontweight='bold')
+    plt.tight_layout()
+    st.pyplot(fig2, use_container_width=True)
+
+    st.markdown("---")
+
+    # ── Tabel per-class lengkap ─────────────────────────────────────────────
+    st.markdown('<div class="card-title">📋 Tabel Lengkap Per Kelas</div>', unsafe_allow_html=True)
+
+    rows = ""
+    for i, cls in enumerate(R_CLASSES):
+        r_p, r_r, r_f = R_PRECISION[i]*100, R_RECALL[i]*100, R_F1[i]*100
+        e_p, e_r, e_f = E_PRECISION[i]*100, E_RECALL[i]*100, E_F1[i]*100
+        badge = render_badge(cls)
+        def cmp(rv, ev):
+            if rv > ev: return f"<span style='color:#10b981;font-weight:700'>{rv:.0f}%</span>", f"<span style='color:#94a3b8'>{ev:.0f}%</span>"
+            elif rv < ev: return f"<span style='color:#94a3b8'>{rv:.0f}%</span>", f"<span style='color:#10b981;font-weight:700'>{ev:.0f}%</span>"
+            else: return f"<span style='color:#94a3b8'>{rv:.0f}%</span>", f"<span style='color:#94a3b8'>{ev:.0f}%</span>"
+        rp_h, ep_h = cmp(r_p, e_p)
+        rr_h, er_h = cmp(r_r, e_r)
+        rf_h, ef_h = cmp(r_f, e_f)
+        rows += f"""<tr style='border-bottom:1px solid rgba(255,255,255,0.04)'>
+            <td style='padding:0.5rem'>{badge}</td>
+            <td style='padding:0.5rem;text-align:center'>{rp_h}</td>
+            <td style='padding:0.5rem;text-align:center'>{ep_h}</td>
+            <td style='padding:0.5rem;text-align:center'>{rr_h}</td>
+            <td style='padding:0.5rem;text-align:center'>{er_h}</td>
+            <td style='padding:0.5rem;text-align:center'>{rf_h}</td>
+            <td style='padding:0.5rem;text-align:center'>{ef_h}</td>
+        </tr>"""
+
+    st.markdown(f"""
+    <div class="card" style='padding:1rem'>
+    <table style='width:100%;border-collapse:collapse;font-size:0.82rem'>
+        <thead><tr style='border-bottom:2px solid rgba(0,229,255,0.2)'>
+            <th style='padding:0.5rem;text-align:left;color:#64748b'>Kelas</th>
+            <th style='padding:0.5rem;text-align:center;color:#00e5ff'>Prec R50</th>
+            <th style='padding:0.5rem;text-align:center;color:#a78bfa'>Prec Eff</th>
+            <th style='padding:0.5rem;text-align:center;color:#00e5ff'>Rec R50</th>
+            <th style='padding:0.5rem;text-align:center;color:#a78bfa'>Rec Eff</th>
+            <th style='padding:0.5rem;text-align:center;color:#00e5ff'>F1 R50</th>
+            <th style='padding:0.5rem;text-align:center;color:#a78bfa'>F1 Eff</th>
+        </tr></thead>
+        <tbody>{rows}</tbody>
+    </table>
+    <div style='font-size:0.7rem;color:#334155;margin-top:0.5rem'>
+        🟢 Angka hijau = model lebih unggul di metrik tersebut
+    </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Tabel arsitektur ────────────────────────────────────────────────────
+    st.markdown('<div class="card-title">🏗️ Perbandingan Arsitektur</div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="card">
     <table style='width:100%;border-collapse:collapse;font-size:0.85rem'>
-        <thead>
-            <tr style='border-bottom:2px solid rgba(0,229,255,0.2)'>
-                <th style='padding:0.75rem;color:#64748b;text-align:left'>Aspek</th>
-                <th style='padding:0.75rem;color:#00e5ff;text-align:center'>ResNet50</th>
-                <th style='padding:0.75rem;color:#a78bfa;text-align:center'>EfficientNetB0</th>
-            </tr>
-        </thead>
+        <thead><tr style='border-bottom:2px solid rgba(0,229,255,0.2)'>
+            <th style='padding:0.75rem;color:#64748b;text-align:left'>Aspek</th>
+            <th style='padding:0.75rem;color:#00e5ff;text-align:center'>ResNet50</th>
+            <th style='padding:0.75rem;color:#a78bfa;text-align:center'>EfficientNetB0</th>
+        </tr></thead>
         <tbody>
             <tr style='border-bottom:1px solid rgba(255,255,255,0.04)'>
                 <td style='padding:0.6rem'>Tahun</td>
@@ -941,14 +1120,9 @@ with tab3:
                 <td style='text-align:center;color:#94a3b8'>~5.3M</td>
             </tr>
             <tr style='border-bottom:1px solid rgba(255,255,255,0.04)'>
-                <td style='padding:0.6rem'>Depth</td>
-                <td style='text-align:center;color:#94a3b8'>50 layer</td>
-                <td style='text-align:center;color:#94a3b8'>B0 baseline</td>
-            </tr>
-            <tr style='border-bottom:1px solid rgba(255,255,255,0.04)'>
-                <td style='padding:0.6rem'>Input Size</td>
-                <td style='text-align:center;color:#94a3b8'>224×224</td>
-                <td style='text-align:center;color:#94a3b8'>224×224</td>
+                <td style='padding:0.6rem'>Test Accuracy</td>
+                <td style='text-align:center;color:#00e5ff;font-weight:700'>93.0%</td>
+                <td style='text-align:center;color:#a78bfa'>89.0%</td>
             </tr>
             <tr style='border-bottom:1px solid rgba(255,255,255,0.04)'>
                 <td style='padding:0.6rem'>Inovasi Utama</td>
@@ -965,79 +1139,22 @@ with tab3:
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="card-title" style="margin-top:1.5rem">📈 Masukkan Metrik Evaluasi Model</div>',
-                unsafe_allow_html=True)
-    st.caption("Isi dengan hasil training/evaluasi dari notebook kamu")
-
-    col_r, col_e = st.columns(2)
-    with col_r:
-        st.markdown("**ResNet50**")
-        r_acc  = st.number_input("Accuracy (%)",  min_value=0.0, max_value=100.0, value=93.0, step=0.1, key="r_acc")
-        r_prec = st.number_input("Precision (%)", min_value=0.0, max_value=100.0, value=93.0, step=0.1, key="r_prec")
-        r_rec  = st.number_input("Recall (%)",    min_value=0.0, max_value=100.0, value=93.0, step=0.1, key="r_rec")
-        r_f1   = st.number_input("F1-Score (%)",  min_value=0.0, max_value=100.0, value=93.0, step=0.1, key="r_f1")
-        r_auc  = st.number_input("AUC-ROC (%)",   min_value=0.0, max_value=100.0, value=96.0, step=0.1, key="r_auc")
-    with col_e:
-        st.markdown("**EfficientNetB0**")
-        e_acc  = st.number_input("Accuracy (%)",  min_value=0.0, max_value=100.0, value=89.0, step=0.1, key="e_acc")
-        e_prec = st.number_input("Precision (%)", min_value=0.0, max_value=100.0, value=89.0, step=0.1, key="e_prec")
-        e_rec  = st.number_input("Recall (%)",    min_value=0.0, max_value=100.0, value=89.0, step=0.1, key="e_rec")
-        e_f1   = st.number_input("F1-Score (%)",  min_value=0.0, max_value=100.0, value=89.0, step=0.1, key="e_f1")
-        e_auc  = st.number_input("AUC-ROC (%)",   min_value=0.0, max_value=100.0, value=97.0, step=0.1, key="e_auc")
-
-    if st.button("📊 Tampilkan Grafik Perbandingan"):
-        metrics     = ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'AUC-ROC']
-        resnet_vals = [r_acc, r_prec, r_rec, r_f1, r_auc]
-        effnet_vals = [e_acc, e_prec, e_rec, e_f1, e_auc]
-
-        x = np.arange(len(metrics))
-        w = 0.35
-
-        fig, ax = plt.subplots(figsize=(10, 5), facecolor='#111827')
-        ax.set_facecolor('#111827')
-        bars1 = ax.bar(x - w/2, resnet_vals, w, label='ResNet50',       color='#00e5ff', alpha=0.85)
-        bars2 = ax.bar(x + w/2, effnet_vals, w, label='EfficientNetB0', color='#7c3aed', alpha=0.85)
-
-        ax.set_xticks(x)
-        ax.set_xticklabels(metrics, color='#94a3b8', fontsize=9)
-        ax.set_ylim(max(0, min(resnet_vals + effnet_vals) - 5), 100)
-        ax.set_ylabel('Score (%)', color='#64748b', fontsize=9)
-        ax.tick_params(colors='#64748b')
-        ax.spines['bottom'].set_color('#1e293b')
-        ax.spines['left'].set_color('#1e293b')
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.yaxis.grid(True, color='#1e293b', linewidth=0.5)
-        ax.set_axisbelow(True)
-        ax.legend(facecolor='#1a2235', edgecolor='#334155', labelcolor='#94a3b8', fontsize=9)
-        ax.set_title("Perbandingan Metrik Evaluasi ResNet50 vs EfficientNetB0",
-                     color='#e2e8f0', fontsize=11, pad=12)
-
-        for bar in bars1:
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.3,
-                    f'{bar.get_height():.1f}', ha='center', va='bottom',
-                    color='#00e5ff', fontsize=7.5, fontweight='bold')
-        for bar in bars2:
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.3,
-                    f'{bar.get_height():.1f}', ha='center', va='bottom',
-                    color='#a78bfa', fontsize=7.5, fontweight='bold')
-
-        st.pyplot(fig, use_container_width=True)
-
-        winner = "ResNet50" if r_acc > e_acc else "EfficientNetB0"
-        diff   = abs(r_acc - e_acc)
-        st.markdown(f"""
-        <div class="analysis-box">
-            <strong style='color:#00e5ff'>📋 Kesimpulan Perbandingan</strong><br><br>
-            Berdasarkan metrik evaluasi yang dimasukkan, 
-            <strong>{winner}</strong> mengungguli model lainnya dengan selisih akurasi 
-            sebesar <strong>{diff:.1f}%</strong>. EfficientNetB0 menawarkan efisiensi parameter 
-            yang jauh lebih tinggi (~5.3M vs ~25.6M parameter) dengan performa yang kompetitif, 
-            menjadikannya kandidat unggul untuk deployment pada perangkat dengan sumber daya terbatas. 
-            ResNet50 di sisi lain memiliki arsitektur yang lebih dalam dan terbukti robust pada 
-            berbagai task klasifikasi medis berkat mekanisme residual connection-nya.
-        </div>
-        """, unsafe_allow_html=True)
+    # ── Kesimpulan ──────────────────────────────────────────────────────────
+    st.markdown(f"""
+    <div class="analysis-box">
+        <strong style='color:#00e5ff'>📋 Kesimpulan Perbandingan</strong><br><br>
+        Berdasarkan hasil evaluasi pada data test (2.800 sampel, 8 kelas),
+        <strong>ResNet50 unggul secara keseluruhan</strong> dengan accuracy <strong>93.0%</strong>
+        dibanding EfficientNetB0 <strong>89.0%</strong> (selisih 4.0%).<br><br>
+        ResNet50 dominan di kelas <strong>AMD, CSR, MH</strong> dengan F1-Score sempurna 100%,
+        serta lebih baik di <strong>CNV dan DME</strong>. EfficientNetB0 sedikit lebih unggul
+        di kelas <strong>DR</strong> (93% vs 99% milik ResNet50) namun tertinggal signifikan
+        di <strong>DRUSEN</strong> (73% vs 80%).<br><br>
+        Dari sisi efisiensi, EfficientNetB0 hanya membutuhkan ~5.3M parameter (vs ~25.6M ResNet50),
+        menjadikannya kandidat lebih ringan untuk deployment — namun untuk akurasi diagnostik
+        maksimal pada dataset ini, <strong>ResNet50 adalah pilihan utama</strong>.
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
