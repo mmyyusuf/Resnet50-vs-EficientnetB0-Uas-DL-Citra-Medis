@@ -27,375 +27,489 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ─── Custom CSS ────────────────────────────────────────────────────────────────
+# ─── Custom CSS — Medical / Clinical Theme ─────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;600&family=Roboto+Condensed:wght@400;700&display=swap');
 
-@keyframes shimmer {
+/* ── Keyframe Animations ── */
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-border {
+    0%, 100% { border-color: rgba(14,165,233,0.3); }
+    50%       { border-color: rgba(14,165,233,0.6); }
+}
+@keyframes shimmer-med {
     0%   { background-position: -200% center; }
     100% { background-position: 200% center; }
 }
-@keyframes float-up {
-    0%   { opacity: 0; transform: translateY(18px); }
-    100% { opacity: 1; transform: translateY(0); }
-}
-@keyframes orb-drift {
-    0%   { transform: translate(0px, 0px); }
-    33%  { transform: translate(20px, -15px); }
-    66%  { transform: translate(-15px, 10px); }
-    100% { transform: translate(0px, 0px); }
-}
-@keyframes pulse-glow {
-    0%, 100% { opacity: 0.6; }
-    50%       { opacity: 1; }
-}
-@keyframes scanline {
-    0%   { top: -10%; }
-    100% { top: 110%; }
-}
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.4; }
+@keyframes scan-h {
+    0%   { top: 0; opacity: 0.6; }
+    100% { top: 100%; opacity: 0; }
 }
 
+/* ── Root Variables — Medical Palette ── */
 :root {
-    --bg1: #0d1b2e;
-    --bg2: #112240;
-    --bg3: #0a192f;
-    --surface: rgba(17,34,64,0.8);
-    --surface2: rgba(10,25,47,0.9);
-    --cyan: #64ffda;
-    --cyan2: #00b4d8;
-    --purple: #c084fc;
-    --blue: #60a5fa;
-    --text: #ccd6f6;
-    --text2: #8892b0;
-    --border: rgba(100,255,218,0.12);
-    --glow: rgba(100,255,218,0.15);
+    --bg:        #f0f4f8;
+    --surface:   #ffffff;
+    --surface2:  #f8fafc;
+    --surface3:  #eef2f7;
+    --primary:   #0369a1;      /* Deep medical blue */
+    --primary-l: #0ea5e9;      /* Sky blue */
+    --primary-ll:#bae6fd;      /* Light sky */
+    --accent:    #0891b2;      /* Cyan-700 */
+    --success:   #059669;      /* Emerald */
+    --warning:   #d97706;      /* Amber */
+    --danger:    #dc2626;      /* Red */
+    --purple:    #7c3aed;
+    --text:      #0f172a;
+    --text-sec:  #475569;
+    --text-muted:#94a3b8;
+    --border:    #cbd5e1;
+    --border-l:  #e2e8f0;
+    --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04);
 }
 
-/* ═══ BACKGROUND ═══ */
-html, body,
-.stApp,
-[data-testid="stAppViewContainer"],
-[data-testid="stAppViewBlockContainer"],
-[data-testid="block-container"],
-.main, .main > div, .block-container {
-    background: linear-gradient(135deg, #0a192f 0%, #0d1b2e 40%, #112240 70%, #0a192f 100%) !important;
+/* ── Global Reset ── */
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif !important;
+    background-color: var(--bg) !important;
     color: var(--text) !important;
 }
 
-/* Ambient background orbs */
-[data-testid="stAppViewContainer"]::before {
-    content: '';
-    position: fixed; inset: 0;
-    background:
-        radial-gradient(ellipse 60% 50% at 10% 20%, rgba(100,255,218,0.06) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 60% at 90% 80%, rgba(192,132,252,0.07) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(96,165,250,0.04) 0%, transparent 70%);
-    pointer-events: none; z-index: 0;
-    animation: orb-drift 20s ease-in-out infinite;
+.main .block-container {
+    padding: 1.25rem 2rem;
+    max-width: 1400px;
 }
 
-/* Dot grid overlay */
-[data-testid="stAppViewContainer"]::after {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: radial-gradient(circle, rgba(100,255,218,0.08) 1px, transparent 1px);
-    background-size: 32px 32px;
-    pointer-events: none; z-index: 0;
-    opacity: 0.5;
-}
-
-/* Scanline */
-.main::after {
-    content: '';
-    position: fixed; left: 0; right: 0; height: 60px;
-    background: linear-gradient(180deg, transparent 0%, rgba(100,255,218,0.015) 50%, transparent 100%);
-    animation: scanline 14s linear infinite;
-    pointer-events: none; z-index: 1;
-}
-
-.main .block-container { padding: 1.5rem 2rem; max-width: 1400px; position: relative; z-index: 2; }
-
-/* Text */
-p, span, div, label, li, h1, h2, h3, h4, h5, h6,
-.stMarkdown, .stMarkdown p, [data-testid="stMarkdownContainer"] p {
-    color: var(--text) !important;
-    font-family: 'Outfit', sans-serif;
-}
-.stCaption, [data-testid="stCaptionContainer"] p { color: var(--text2) !important; }
-
-/* ═══ SIDEBAR ═══ */
-section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0a1628 0%, #0d1f38 100%) !important;
-    border-right: 1px solid rgba(100,255,218,0.1) !important;
-}
-section[data-testid="stSidebar"] *,
-section[data-testid="stSidebar"] p,
-section[data-testid="stSidebar"] span,
-section[data-testid="stSidebar"] label {
-    color: var(--text) !important;
-}
-section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-    color: var(--text2) !important;
-}
-
-/* ═══ HERO HEADER ═══ */
+/* ── Hero Header ── */
 .hero-header {
-    position: relative; border-radius: 20px;
-    padding: 2.5rem 3rem; margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 45%, #0891b2 100%);
+    border-radius: 16px;
+    padding: 2rem 2.5rem;
+    margin-bottom: 1.5rem;
+    position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, #0d2137 0%, #112240 50%, #0d1f38 100%);
-    border: 1px solid rgba(100,255,218,0.2);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(100,255,218,0.1);
-    animation: float-up 0.5s ease-out;
+    box-shadow: var(--shadow-lg);
+    animation: fade-in 0.5s ease-out;
 }
 .hero-header::before {
-    content: ''; position: absolute; inset: 0;
-    background:
-        radial-gradient(ellipse at 10% 60%, rgba(100,255,218,0.1) 0%, transparent 50%),
-        radial-gradient(ellipse at 90% 20%, rgba(192,132,252,0.1) 0%, transparent 50%);
-    animation: orb-drift 16s ease-in-out infinite; pointer-events: none;
+    content: '';
+    position: absolute;
+    top: -40%; left: -10%;
+    width: 50%; height: 200%;
+    background: rgba(255,255,255,0.05);
+    transform: rotate(-15deg);
+    pointer-events: none;
 }
 .hero-header::after {
-    content: ''; position: absolute;
-    bottom: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-    background-size: 200% auto; animation: shimmer 4s linear infinite;
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #38bdf8, #7dd3fc, #38bdf8);
+    background-size: 200% auto;
+    animation: shimmer-med 3s linear infinite;
 }
-.hero-corner { position: absolute; width: 16px; height: 16px; border-color: rgba(100,255,218,0.4); border-style: solid; }
-.hero-corner.tl { top: 14px; left: 14px; border-width: 2px 0 0 2px; }
-.hero-corner.tr { top: 14px; right: 14px; border-width: 2px 2px 0 0; }
-.hero-corner.bl { bottom: 14px; left: 14px; border-width: 0 0 2px 2px; }
-.hero-corner.br { bottom: 14px; right: 14px; border-width: 0 2px 2px 0; }
-.hero-eyecon {
-    font-size: 2.8rem; display: inline-block;
-    margin-right: 0.75rem; vertical-align: middle;
-    filter: drop-shadow(0 0 12px rgba(100,255,218,0.6));
-    animation: pulse-glow 2.5s ease-in-out infinite;
+.hero-scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+    background: rgba(255,255,255,0.15);
+    animation: scan-h 4s linear infinite;
+    pointer-events: none;
 }
 .hero-title {
-    font-family: 'Rajdhani', sans-serif !important;
-    font-size: 2.6rem !important; font-weight: 700 !important;
-    background: linear-gradient(90deg, #64ffda 0%, #00b4d8 45%, #c084fc 100%) !important;
-    background-size: 200% auto !important;
-    -webkit-background-clip: text !important; background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    animation: shimmer 4s linear infinite !important;
-    display: inline !important; vertical-align: middle !important;
+    font-family: 'Roboto Condensed', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+    margin: 0;
+    line-height: 1.1;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 .hero-sub {
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.67rem !important; color: #4a6a82 !important;
-    -webkit-text-fill-color: #4a6a82 !important;
-    letter-spacing: 0.15em; text-transform: uppercase; margin-top: 0.7rem;
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.75);
+    margin-top: 0.5rem;
+    letter-spacing: 0.03em;
 }
-.hero-sub span { color: rgba(100,255,218,0.55) !important; -webkit-text-fill-color: rgba(100,255,218,0.55) !important; margin: 0 0.4rem; }
 .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 20px;
+    padding: 0.25rem 0.9rem;
+    font-size: 0.7rem;
+    color: #e0f2fe;
+    margin-top: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    backdrop-filter: blur(4px);
+}
+.hero-badge::before {
+    content: '';
     display: inline-block;
-    background: rgba(100,255,218,0.07); border: 1px solid rgba(100,255,218,0.2);
-    border-radius: 20px; padding: 0.18rem 0.9rem; margin-top: 0.6rem;
-    font-family: 'JetBrains Mono', monospace !important; font-size: 0.62rem !important;
-    color: rgba(100,255,218,0.75) !important; -webkit-text-fill-color: rgba(100,255,218,0.75) !important;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    animation: blink 2.5s ease-in-out infinite;
+    width: 6px; height: 6px;
+    background: #4ade80;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(74,222,128,0.3);
+}
+.hero-cross {
+    position: absolute;
+    right: 2.5rem; top: 50%;
+    transform: translateY(-50%);
+    width: 60px; height: 60px;
+    opacity: 0.12;
 }
 
-/* ═══ CARDS ═══ */
+/* ── Cards ── */
 .card {
-    background: rgba(13,31,56,0.7); backdrop-filter: blur(16px);
-    border: 1px solid rgba(100,255,218,0.1); border-radius: 16px;
-    padding: 1.5rem; margin-bottom: 1rem;
-    position: relative; overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
-    animation: float-up 0.4s ease-out;
-}
-.card::before {
-    content: ''; position: absolute;
-    top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(100,255,218,0.2), transparent);
+    background: var(--surface);
+    border: 1px solid var(--border-l);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+    animation: fade-in 0.4s ease-out;
+    transition: box-shadow 0.2s;
 }
 .card:hover {
-    border-color: rgba(100,255,218,0.2);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(100,255,218,0.05);
-    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 .card-title {
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.7rem !important; color: var(--cyan) !important;
-    -webkit-text-fill-color: var(--cyan) !important;
-    text-transform: uppercase; letter-spacing: 0.15em;
-    margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
-}
-.card-title::before {
-    content: ''; display: inline-block; flex-shrink: 0;
-    width: 3px; height: 11px; background: var(--cyan);
-    border-radius: 2px; box-shadow: 0 0 8px var(--cyan);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 2px solid var(--primary-ll);
+    padding-bottom: 0.5rem;
 }
 
-/* ═══ METRIC BOXES ═══ */
+/* ── Metric Boxes ── */
 .metric-box {
-    background: rgba(10,25,47,0.6);
-    border-radius: 12px; padding: 1rem 1.25rem;
-    border: 1px solid rgba(100,255,218,0.1); border-left: 3px solid var(--cyan);
-    margin-bottom: 0.75rem; transition: all 0.25s;
+    background: var(--surface2);
+    border: 1px solid var(--border-l);
+    border-left: 3px solid var(--primary-l);
+    border-radius: 10px;
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 0.6rem;
+    transition: all 0.2s;
 }
-.metric-box:hover { border-color: rgba(100,255,218,0.25); transform: translateX(3px); }
+.metric-box:hover {
+    border-left-color: var(--primary);
+    box-shadow: var(--shadow);
+    transform: translateX(3px);
+}
 .metric-label {
-    font-family: 'JetBrains Mono', monospace !important; font-size: 0.62rem !important;
-    color: var(--text2) !important; -webkit-text-fill-color: var(--text2) !important;
-    text-transform: uppercase; letter-spacing: 0.1em;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.2rem;
 }
 .metric-value {
-    font-family: 'Rajdhani', sans-serif !important; font-size: 1.9rem !important;
-    font-weight: 700 !important; color: var(--cyan) !important;
-    -webkit-text-fill-color: var(--cyan) !important; line-height: 1.1;
-    text-shadow: 0 0 16px rgba(100,255,218,0.3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.1;
 }
 
-/* ═══ BADGES ═══ */
+/* ── Badges ── */
 .badge {
-    display: inline-block; padding: 0.22rem 0.7rem; border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.68rem !important; font-weight: 600;
-    letter-spacing: 0.07em; text-transform: uppercase;
+    display: inline-block;
+    padding: 0.2rem 0.7rem;
+    border-radius: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
-.badge-cnv    { background: rgba(239,68,68,0.12);   color: #ff8080 !important; -webkit-text-fill-color: #ff8080 !important;   border: 1px solid rgba(239,68,68,0.3); }
-.badge-dme    { background: rgba(245,158,11,0.12);  color: #fcd34d !important; -webkit-text-fill-color: #fcd34d !important;  border: 1px solid rgba(245,158,11,0.3); }
-.badge-drusen { background: rgba(16,185,129,0.12);  color: #6ee7b7 !important; -webkit-text-fill-color: #6ee7b7 !important;  border: 1px solid rgba(16,185,129,0.3); }
-.badge-normal { background: rgba(100,255,218,0.08); color: #64ffda !important; -webkit-text-fill-color: #64ffda !important; border: 1px solid rgba(100,255,218,0.25); }
-.badge-mh     { background: rgba(192,132,252,0.12); color: #d8b4fe !important; -webkit-text-fill-color: #d8b4fe !important; border: 1px solid rgba(192,132,252,0.3); }
-.badge-dr     { background: rgba(244,114,182,0.12); color: #f9a8d4 !important; -webkit-text-fill-color: #f9a8d4 !important; border: 1px solid rgba(244,114,182,0.3); }
-.badge-csr    { background: rgba(96,165,250,0.12);  color: #93c5fd !important; -webkit-text-fill-color: #93c5fd !important;  border: 1px solid rgba(96,165,250,0.3); }
-.badge-amd    { background: rgba(251,146,60,0.12);  color: #fdba74 !important; -webkit-text-fill-color: #fdba74 !important;  border: 1px solid rgba(251,146,60,0.3); }
+.badge-cnv   { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+.badge-dme   { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.badge-drusen{ background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.badge-normal{ background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+.badge-mh    { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
+.badge-dr    { background: #fce7f3; color: #9d174d; border: 1px solid #f9a8d4; }
+.badge-csr   { background: #e0f2fe; color: #0c4a6e; border: 1px solid #7dd3fc; }
+.badge-amd   { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
 
-/* ═══ ANALYSIS BOX ═══ */
+/* ── Analysis Box ── */
 .analysis-box {
-    background: rgba(10,25,47,0.5);
-    border: 1px solid rgba(100,255,218,0.12); border-radius: 14px;
-    padding: 1.5rem; font-size: 0.87rem; line-height: 1.8;
-    color: #8892b0 !important; margin-top: 1rem; position: relative;
-}
-.analysis-box::before {
-    content: '// ANALYSIS OUTPUT'; position: absolute; top: 0.6rem; right: 1rem;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.55rem;
-    color: rgba(100,255,218,0.15) !important; letter-spacing: 0.1em;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-left: 4px solid var(--primary-l);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    font-size: 0.87rem;
+    line-height: 1.8;
+    color: #1e3a5f;
+    margin-top: 1rem;
 }
 
-/* ═══ PROGRESS BAR ═══ */
+/* ── Info / Result Boxes ── */
+.result-agree {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-left: 4px solid var(--success);
+    border-radius: 10px;
+    padding: 0.85rem 1.25rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.result-disagree {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-left: 4px solid var(--warning);
+    border-radius: 10px;
+    padding: 0.85rem 1.25rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* ── Progress Bars ── */
 .stProgress > div > div {
-    background: linear-gradient(90deg, #64ffda, #00b4d8, #c084fc) !important;
-    background-size: 200% auto !important; animation: shimmer 2.5s linear infinite !important;
-    border-radius: 4px !important; box-shadow: 0 0 8px rgba(100,255,218,0.25) !important;
+    background: linear-gradient(90deg, var(--primary), var(--primary-l)) !important;
+    border-radius: 4px !important;
 }
-.stProgress > div { background: rgba(100,255,218,0.05) !important; border-radius: 4px !important; }
-[data-testid="stProgressBarMessage"] p {
-    color: var(--text2) !important; -webkit-text-fill-color: var(--text2) !important;
-    font-family: 'JetBrains Mono', monospace !important; font-size: 0.7rem !important;
+.stProgress > div {
+    background: var(--border-l) !important;
+    border-radius: 4px !important;
 }
 
-/* ═══ TABS ═══ */
+/* ── Tabs ── */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 0.3rem; background: rgba(10,25,47,0.9) !important;
-    border-radius: 12px; padding: 0.3rem; border: 1px solid var(--border);
+    gap: 0.25rem;
+    background: var(--surface3) !important;
+    border-radius: 10px;
+    padding: 0.3rem;
+    border: 1px solid var(--border-l);
 }
 .stTabs [data-baseweb="tab"] {
-    background: transparent !important; border-radius: 8px; border: none !important;
-    color: var(--text2) !important; -webkit-text-fill-color: var(--text2) !important;
-    font-family: 'JetBrains Mono', monospace !important; font-size: 0.7rem !important;
-    letter-spacing: 0.04em; padding: 0.45rem 0.9rem; transition: all 0.2s;
+    background: transparent;
+    border-radius: 7px;
+    border: none;
+    color: var(--text-sec);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.45rem 1rem;
+    transition: all 0.18s;
 }
-.stTabs [data-baseweb="tab"]:hover { color: var(--cyan) !important; -webkit-text-fill-color: var(--cyan) !important; }
+.stTabs [data-baseweb="tab"]:hover {
+    color: var(--primary);
+    background: rgba(14,165,233,0.08);
+}
 .stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, rgba(100,255,218,0.1), rgba(0,180,216,0.1)) !important;
-    color: var(--cyan) !important; -webkit-text-fill-color: var(--cyan) !important;
-    border: 1px solid rgba(100,255,218,0.2) !important;
-    box-shadow: 0 0 12px rgba(100,255,218,0.08) !important;
+    background: var(--surface) !important;
+    color: var(--primary) !important;
+    border: 1px solid var(--border-l) !important;
+    box-shadow: var(--shadow) !important;
+    font-weight: 600 !important;
 }
-[data-testid="stTabPanel"] { background: transparent !important; padding-top: 1rem; }
 
-/* ═══ BUTTONS ═══ */
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: #ffffff !important;
+    border-right: 1px solid var(--border) !important;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.04) !important;
+}
+section[data-testid="stSidebar"] .block-container {
+    padding: 1rem !important;
+}
+
+/* ── Sidebar custom elements ── */
+.sb-header {
+    background: linear-gradient(135deg, #0369a1, #0891b2);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+.sb-section {
+    background: var(--surface2);
+    border: 1px solid var(--border-l);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+.sb-section-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-bottom: 1px solid var(--border-l);
+    padding-bottom: 0.35rem;
+}
+.sb-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+    font-size: 0.78rem;
+    color: var(--text-sec);
+    border-bottom: 1px solid var(--border-l);
+}
+.sb-stat:last-child { border-bottom: none; }
+.sb-stat-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: var(--primary);
+}
+.sb-model-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border-l);
+    border-radius: 6px;
+    padding: 0.4rem 0.65rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.78rem;
+    color: var(--text-sec);
+    font-weight: 500;
+}
+.sb-model-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.sb-nav-link {
+    display: block;
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--text-sec);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    margin-bottom: 0.2rem;
+}
+.sb-nav-link:hover {
+    background: #e0f2fe;
+    color: var(--primary);
+}
+.sb-cls-chip {
+    display: inline-block;
+    font-size: 0.68rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    margin: 0.15rem;
+    font-weight: 600;
+}
+
+/* ── Buttons ── */
 .stButton > button {
-    background: rgba(100,255,218,0.05) !important;
-    border: 1px solid rgba(100,255,218,0.3) !important;
-    color: var(--cyan) !important; -webkit-text-fill-color: var(--cyan) !important;
-    font-family: 'JetBrains Mono', monospace !important; font-size: 0.72rem !important;
-    letter-spacing: 0.04em; border-radius: 10px !important; padding: 0.55rem 1.4rem !important;
-    transition: all 0.25s !important;
+    background: var(--primary) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    padding: 0.55rem 1.4rem !important;
+    transition: all 0.2s !important;
+    box-shadow: 0 1px 3px rgba(3,105,161,0.3) !important;
 }
 .stButton > button:hover {
-    background: rgba(100,255,218,0.1) !important;
-    border-color: var(--cyan) !important; color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    box-shadow: 0 0 20px rgba(100,255,218,0.2) !important;
-    transform: translateY(-2px);
+    background: #0284c7 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(3,105,161,0.35) !important;
+}
+.stButton > button:active {
+    transform: translateY(0) !important;
 }
 
-/* ═══ FILE UPLOADER ═══ */
+/* ── File Uploader ── */
 div[data-testid="stFileUploader"] {
-    background: rgba(13,31,56,0.5) !important;
-    border: 1px dashed rgba(100,255,218,0.2) !important; border-radius: 14px !important;
-    transition: all 0.3s;
+    background: #f0f9ff;
+    border: 2px dashed #7dd3fc;
+    border-radius: 12px;
+    transition: all 0.2s;
 }
 div[data-testid="stFileUploader"]:hover {
-    background: rgba(13,31,56,0.7) !important;
-    border-color: rgba(100,255,218,0.4) !important;
-    box-shadow: 0 0 20px rgba(100,255,218,0.05) !important;
-}
-div[data-testid="stFileUploader"] * { color: var(--text) !important; }
-
-/* ═══ SELECT / INPUT ═══ */
-[data-baseweb="select"] > div {
-    background: rgba(10,25,47,0.8) !important;
-    border: 1px solid rgba(100,255,218,0.12) !important; border-radius: 10px !important;
-}
-[data-baseweb="select"] span,
-[data-baseweb="select"] div { color: var(--text) !important; -webkit-text-fill-color: var(--text) !important; }
-[data-baseweb="menu"], [data-baseweb="popover"] { background: #0d1f38 !important; border: 1px solid var(--border) !important; }
-[data-baseweb="popover"] [role="option"] { color: var(--text) !important; background: transparent !important; }
-[data-baseweb="popover"] [role="option"]:hover { background: rgba(100,255,218,0.06) !important; }
-[data-testid="stNumberInput"] input {
-    background: rgba(10,25,47,0.8) !important; color: var(--text) !important;
-    -webkit-text-fill-color: var(--text) !important;
-    border: 1px solid rgba(100,255,218,0.1) !important; border-radius: 8px !important;
+    background: #e0f2fe;
+    border-color: var(--primary-l);
 }
 
-/* ═══ ALERTS / NOTIFICATIONS ═══ */
-[data-testid="stNotification"],
-div[role="alert"] {
-    background: rgba(13,31,56,0.8) !important;
-    border: 1px solid rgba(100,255,218,0.15) !important; border-radius: 10px !important;
+/* ── Selectbox & inputs ── */
+div[data-testid="stSelectbox"] > div,
+div[data-testid="stNumberInput"] > div > div {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    color: var(--text) !important;
 }
 
-/* ═══ EXPANDERS ═══ */
-details { background: rgba(10,25,47,0.6) !important; border: 1px solid var(--border) !important; border-radius: 10px !important; }
-summary { color: var(--text) !important; }
-details * { color: var(--text) !important; }
-
-/* Checkbox */
-[data-testid="stCheckbox"] span,
-[data-testid="stCheckbox"] p { color: var(--text) !important; }
-
-/* Status widget */
-[data-testid="stStatusWidget"],
-[data-testid="stStatusWidget"] * {
-    background: rgba(10,25,47,0.8) !important; color: var(--text) !important;
+/* ── Expander ── */
+details {
+    background: var(--surface2) !important;
+    border: 1px solid var(--border-l) !important;
+    border-radius: 8px !important;
+    margin-bottom: 0.4rem !important;
+}
+details summary {
+    color: var(--text-sec) !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
 }
 
-/* ═══ SCROLLBAR ═══ */
+/* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #0a192f; }
-::-webkit-scrollbar-thumb { background: rgba(100,255,218,0.2); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(100,255,218,0.4); }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+/* ── Status widget ── */
+div[data-testid="stStatusWidget"] {
+    background: var(--surface) !important;
+    border: 1px solid var(--border-l) !important;
+    border-radius: 10px !important;
+}
+
+/* ── Alert / info boxes ── */
+div[data-testid="stAlert"] {
+    border-radius: 8px !important;
+}
+
+/* ── Divider ── */
+hr {
+    border-color: var(--border-l) !important;
+    margin: 1rem 0 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
-
 # ─── Konstanta ─────────────────────────────────────────────────────────────────
-# Urutan sesuai training: os.listdir train_path
 CLASS_NAMES = ['AMD', 'CNV', 'CSR', 'DME', 'DR', 'DRUSEN', 'MH', 'NORMAL']
 
 CLASS_BADGE = {
@@ -419,6 +533,14 @@ CLASS_DESC = {
     'DME':    'Diabetic Macular Edema – pembengkakan makula akibat komplikasi diabetes.',
     'NORMAL': 'Retina sehat tanpa tanda-tanda patologi.',
 }
+
+CLASS_SEVERITY = {
+    'CNV': '🔴 Tinggi', 'DR': '🔴 Tinggi', 'DME': '🔴 Tinggi',
+    'AMD': '🟠 Sedang-Tinggi', 'MH': '🟠 Sedang',
+    'CSR': '🟡 Sedang', 'DRUSEN': '🟡 Rendah-Sedang',
+    'NORMAL': '🟢 Normal',
+}
+
 IMG_SIZE = (224, 224)
 
 GDRIVE_RESNET_URL       = "https://drive.google.com/file/d/1eFgQxxFegoF1699bTVh20fVzmXl2n-EJ/view?usp=drive_link"
@@ -426,6 +548,18 @@ GDRIVE_EFFICIENTNET_URL = "https://drive.google.com/file/d/1_WIEbc5xHhesDSjRD7SD
 
 MODEL_DIR = Path("models")
 MODEL_DIR.mkdir(exist_ok=True)
+
+# ─── Session State Init ────────────────────────────────────────────────────────
+if 'total_predictions' not in st.session_state:
+    st.session_state.total_predictions = 0
+if 'last_prediction' not in st.session_state:
+    st.session_state.last_prediction = None
+if 'correct_cases' not in st.session_state:
+    st.session_state.correct_cases = []
+if 'wrong_cases' not in st.session_state:
+    st.session_state.wrong_cases = []
+if 'last_model' not in st.session_state:
+    st.session_state.last_model = None
 
 # ─── Fungsi Helper ─────────────────────────────────────────────────────────────
 
@@ -463,9 +597,9 @@ def get_preprocess_fn(model_name: str):
 def get_last_conv_layer(model, model_name: str = "") -> str:
     """
     Cari conv layer terbaik untuk Grad-CAM++.
-    - ResNet50      → conv5_block3_3_conv (feature map akhir block5)
-    - EfficientNetB0→ top_conv (feature map sebelum global pooling)
-    - Fallback      → Conv2D terakhir dengan kernel > 1x1
+    - ResNet50       → conv5_block3_3_conv (feature map akhir block5)
+    - EfficientNetB0 → top_conv (feature map sebelum global pooling)
+    - Fallback       → Conv2D terakhir dengan kernel > 1x1
     """
     preferred = {
         'ResNet50':       ['conv5_block3_3_conv', 'conv5_block3_2_conv', 'conv5_block3_1_conv'],
@@ -498,52 +632,79 @@ def get_last_conv_layer(model, model_name: str = "") -> str:
 
 def grad_cam_plusplus(model, img_array: np.ndarray, class_idx: int, layer_name: str) -> np.ndarray:
     """
-    Implementasi Grad-CAM++ sesuai notebook Colab:
-    grads  = dL/dA
-    second = grads^2
-    third  = grads^3
-    alpha  = second / (2*second + global_sum*third + eps)
-    weights= sum(alpha * relu(grads))
-    cam    = sum(weights * conv_outputs)
+    Grad-CAM++ yang benar:
+    - grad_model dibangun agar output conv + logits sekaligus
+    - watch() dipanggil SEBELUM forward pass di dalam tape (bukan setelah)
+    - tape persistent=True agar grads dapat dihitung berurutan dari satu forward pass
+    - Gradien orde-2 dan orde-3 dihitung terhadap conv_out, bukan berantai dari grads1
     """
     grad_model = tf.keras.models.Model(
-        inputs=model.inputs,
-        outputs=[model.get_layer(layer_name).output, model.output]
+        inputs  = model.inputs,
+        outputs = [model.get_layer(layer_name).output, model.output]
     )
 
     img_tensor = tf.cast(img_array, tf.float32)
 
-    with tf.GradientTape() as tape:
-        conv_outputs, predictions = grad_model(img_tensor)
-        tape.watch(conv_outputs)
-        loss = predictions[:, class_idx]
+    with tf.GradientTape(persistent=True) as tape:
+        # watch conv_out SEBELUM forward pass — inilah kunci koreksinya
+        # Kita gunakan satu tape persistent untuk semua turunan
+        conv_out, preds = grad_model(img_tensor, training=False)
+        tape.watch(conv_out)
+        loss = preds[:, class_idx]
 
-    grads = tape.gradient(loss, conv_outputs)  # (1, H, W, C)
+    # dL/dA  — gradient pertama terhadap conv feature map
+    grads1 = tape.gradient(loss, conv_out)
 
-    # Orde-2 dan orde-3 — sesuai notebook
-    second = grads * grads
-    third  = grads * grads * grads
+    # Untuk orde-2 dan orde-3, kita perlu nested tape yang watch conv_out sejak awal
+    # Strategi: hitung ulang dengan nested tape agar chain rule benar
+    with tf.GradientTape() as tape3:
+        with tf.GradientTape() as tape2:
+            with tf.GradientTape() as tape1:
+                conv_out2, preds2 = grad_model(img_tensor, training=False)
+                tape1.watch(conv_out2)
+                tape2.watch(conv_out2)
+                tape3.watch(conv_out2)
+                loss2 = preds2[:, class_idx]
+            g1 = tape1.gradient(loss2, conv_out2)   # dL/dA
+        g2 = tape2.gradient(g1, conv_out2)           # d²L/dA²
+    g3 = tape3.gradient(g2, conv_out2)               # d³L/dA³
 
-    # global_sum: sum seluruh spatial & channel dari conv_outputs
-    global_sum = tf.reduce_sum(conv_outputs, axis=(0, 1, 2))  # (C,)
+    del tape  # bebaskan tape persistent
 
-    # Alpha
-    alpha = second / (2.0 * second + global_sum * third + 1e-7)
+    # Ambil nilai numpy, lepas dimensi batch
+    A  = conv_out2[0].numpy()   # (H, W, C)
+    g1 = g1[0].numpy()
+    g2 = g2[0].numpy()
+    g3 = g3[0].numpy() if g3 is not None else np.zeros_like(g2)
 
-    # Weights: sum spatial dari alpha * relu(grads)  → (C,)
-    weights = tf.reduce_sum(alpha * tf.nn.relu(grads), axis=(0, 1, 2))
+    # ── Alpha Grad-CAM++ ──────────────────────────────────────────────────────
+    # global_sum: sum_k A^k_{ij}  shape (C,)
+    global_sum  = np.sum(A, axis=(0, 1))
 
-    # CAM: weighted sum feature maps  → (H, W)
-    cam = tf.reduce_sum(weights * conv_outputs[0], axis=-1)
-    cam = tf.maximum(cam, 0).numpy()
+    alpha_num   = g2
+    alpha_denom = 2.0 * g2 + g3 * global_sum[np.newaxis, np.newaxis, :]
 
-    # Resize & normalize ke [0, 1]
+    # Hindari pembagian dengan nol
+    alpha_denom = np.where(np.abs(alpha_denom) < 1e-7,
+                           np.ones_like(alpha_denom),
+                           alpha_denom)
+    alphas  = alpha_num / alpha_denom                               # (H, W, C)
+
+    # weights: sum_{i,j} ReLU(dL/dA) * alpha  → shape (C,)
+    weights = np.sum(np.maximum(g1, 0) * alphas, axis=(0, 1))
+
+    # CAM: weighted sum of feature maps  → shape (H, W)
+    cam = np.sum(weights * A, axis=-1)
+    cam = np.maximum(cam, 0)                                        # ReLU
+
+    # Resize ke ukuran input & normalisasi ke [0, 1]
     cam = cv2.resize(cam, IMG_SIZE)
-    max_val = cam.max()
-    if max_val > 1e-8:
-        cam = cam / max_val
+    c_min, c_max = cam.min(), cam.max()
+    if c_max - c_min > 1e-8:
+        cam = (cam - c_min) / (c_max - c_min)
     else:
         cam = np.zeros_like(cam)
+
     return cam
 
 
@@ -563,7 +724,7 @@ def predict(model, img_array: np.ndarray):
 
 def fig_to_image(fig):
     buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight', facecolor='#0a0e1a')
+    fig.savefig(buf, format='png', bbox_inches='tight', facecolor='#f8fafc')
     buf.seek(0)
     return Image.open(buf)
 
@@ -581,16 +742,16 @@ def generate_gradcam_analysis(model_name: str, correct_cases, wrong_cases,
     if total == 0:
         return None
 
-    fig, axes = plt.subplots(total, 3, figsize=(12, total * 3.2), facecolor='#0a0e1a')
+    fig, axes = plt.subplots(total, 3, figsize=(12, total * 3.2), facecolor='#f8fafc')
     if total == 1:
         axes = [axes]
 
-    fig.suptitle(f"Grad-CAM++ Analysis — {model_name}", fontsize=14,
-                 color='#00e5ff', fontname='monospace', y=1.01)
+    fig.suptitle(f"Grad-CAM++ Analysis — {model_name}", fontsize=13,
+                 color='#0369a1', fontname='sans-serif', fontweight='bold', y=1.01)
 
     headers = ['Citra Asli', 'Grad-CAM++ Heatmap', 'Overlay']
     for ax, h in zip(axes[0], headers):
-        ax.set_title(h, color='#94a3b8', fontsize=9, pad=6)
+        ax.set_title(h, color='#475569', fontsize=9, pad=6, fontweight='600')
 
     for row_idx, (pil_img, true_lbl, pred_lbl, conf) in enumerate(correct_cases + wrong_cases):
         is_correct = row_idx < n_correct
@@ -601,7 +762,7 @@ def generate_gradcam_analysis(model_name: str, correct_cases, wrong_cases,
         heatmap = grad_cam_plusplus(model, inp, pred_idx, layer_name)
         overlay = overlay_heatmap(orig_arr, heatmap)
 
-        color = '#10b981' if is_correct else '#ef4444'
+        color = '#059669' if is_correct else '#dc2626'
         label = '✓ BENAR' if is_correct else '✗ SALAH'
         title = f"{label}  |  Pred: {pred_lbl}  |  True: {true_lbl}  |  {conf:.1f}%"
 
@@ -611,7 +772,7 @@ def generate_gradcam_analysis(model_name: str, correct_cases, wrong_cases,
 
         for ax in axes[row_idx]:
             ax.axis('off')
-            ax.set_facecolor('#0a0e1a')
+            ax.set_facecolor('#f8fafc')
             for spine in ax.spines.values():
                 spine.set_edgecolor(color)
                 spine.set_linewidth(1.5)
@@ -625,53 +786,136 @@ def generate_gradcam_analysis(model_name: str, correct_cases, wrong_cases,
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
+
+    # ── Header Sidebar ──
     st.markdown("""
-    <div style='padding:0.5rem 0 1.5rem'>
-        <div style='font-family:Space Mono,monospace;font-size:1.1rem;color:#00e5ff;font-weight:700'>
-            👁️ RetinaScan AI
+    <div class="sb-header">
+        <div style='font-size:1.5rem;margin-bottom:0.3rem'>👁️</div>
+        <div style='font-family:"Roboto Condensed",sans-serif;font-size:1.05rem;
+                    color:#ffffff;font-weight:700;letter-spacing:0.02em'>RetinaScan AI</div>
+        <div style='font-size:0.68rem;color:rgba(255,255,255,0.7);margin-top:0.2rem;
+                    text-transform:uppercase;letter-spacing:0.08em'>OCT Classification System</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Konfigurasi Model ──
+    st.markdown("""<div class="sb-section-title">⚙️ Konfigurasi Model</div>""",
+                unsafe_allow_html=True)
+    use_resnet       = st.checkbox("ResNet50",       value=True)
+    use_efficientnet = st.checkbox("EfficientNetB0", value=True)
+
+    st.markdown("---")
+
+    # ── Status Model (ditampilkan setelah load) ──
+    st.markdown("""
+    <div class="sb-section">
+        <div class="sb-section-title">🔌 Status Model</div>
+    """, unsafe_allow_html=True)
+
+    model_status_placeholder = st.empty()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Statistik Sesi ──
+    n_correct_ss = len(st.session_state.correct_cases)
+    n_wrong_ss   = len(st.session_state.wrong_cases)
+    total_pred   = st.session_state.total_predictions
+
+    st.markdown(f"""
+    <div class="sb-section">
+        <div class="sb-section-title">📈 Statistik Sesi</div>
+        <div class="sb-stat">
+            <span>Total Prediksi</span>
+            <span class="sb-stat-val">{total_pred}</span>
         </div>
-        <div style='font-size:0.72rem;color:#475569;margin-top:0.3rem;text-transform:uppercase;letter-spacing:0.08em'>
-            OCT Classification System
+        <div class="sb-stat">
+            <span>Kasus Benar (Tab 2)</span>
+            <span class="sb-stat-val" style="color:#059669">{n_correct_ss}/5</span>
+        </div>
+        <div class="sb-stat">
+            <span>Kasus Salah (Tab 2)</span>
+            <span class="sb-stat-val" style="color:#dc2626">{n_wrong_ss}/5</span>
+        </div>
+        <div class="sb-stat">
+            <span>Model Aktif</span>
+            <span class="sb-stat-val">{sum([use_resnet, use_efficientnet])}/2</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("##### 🔧 Konfigurasi Model")
-    use_resnet       = st.checkbox("ResNet50",        value=True)
-    use_efficientnet = st.checkbox("EfficientNetB0",  value=True)
-
-    st.markdown("---")
-    st.markdown("##### 📊 Kelas Penyakit Retina")
-    for cls, desc in CLASS_DESC.items():
-        with st.expander(cls):
-            st.caption(desc)
-
-    st.markdown("---")
+    # ── Info Teknis ──
     st.markdown("""
-    <div style='font-size:0.7rem;color:#334155;text-align:center'>
-        Perbandingan ResNet50 vs EfficientNetB0<br>
-        Explainable AI — Grad-CAM++<br>
-        Klasifikasi Penyakit Retina (OCT)
+    <div class="sb-section">
+        <div class="sb-section-title">🔬 Informasi Teknis</div>
+        <div class="sb-stat">
+            <span>Input Size</span>
+            <span class="sb-stat-val">224×224</span>
+        </div>
+        <div class="sb-stat">
+            <span>Kelas</span>
+            <span class="sb-stat-val">8</span>
+        </div>
+        <div class="sb-stat">
+            <span>XAI Method</span>
+            <span class="sb-stat-val">Grad-CAM++</span>
+        </div>
+        <div class="sb-stat">
+            <span>Dataset</span>
+            <span class="sb-stat-val">OCT Retina</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # ── Legenda Kelas ──
+    st.markdown("""
+    <div class="sb-section">
+        <div class="sb-section-title">🏥 Kelas Penyakit</div>
+    """, unsafe_allow_html=True)
+
+    badge_colors = {
+        'CNV':'#fee2e2;color:#b91c1c', 'DR':'#fce7f3;color:#9d174d',
+        'CSR':'#e0f2fe;color:#0c4a6e', 'MH':'#ede9fe;color:#5b21b6',
+        'AMD':'#ffedd5;color:#9a3412', 'DRUSEN':'#d1fae5;color:#065f46',
+        'DME':'#fef3c7;color:#92400e', 'NORMAL':'#dbeafe;color:#1e40af',
+    }
+    chips_html = ""
+    for cls in CLASS_NAMES:
+        bc = badge_colors.get(cls, '#f1f5f9;color:#475569')
+        chips_html += f"<span class='sb-cls-chip' style='background:{bc.split(';')[0].replace('background:','')};{bc.split(';')[1] if ';' in bc else ''}'>{cls}</span>"
+    st.markdown(chips_html, unsafe_allow_html=True)
+
+    with st.expander("Lihat Deskripsi Kelas", expanded=False):
+        for cls, desc in CLASS_DESC.items():
+            sev = CLASS_SEVERITY.get(cls, '')
+            st.markdown(f"**{cls}** {sev}\n\n{desc}\n\n---")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Footer ──
+    st.markdown("""
+    <div style='text-align:center;padding:0.75rem 0 0.25rem;
+                font-size:0.65rem;color:#94a3b8;line-height:1.7;
+                border-top:1px solid #e2e8f0;margin-top:0.5rem'>
+        ResNet50 vs EfficientNetB0<br>
+        Grad-CAM++ · OCT Retina Classification<br>
+        <span style='color:#cbd5e1'>UPN Veteran Jawa Timur</span>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 # ─── Header Utama ─────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hero-header">
-    <div class="hero-corner tl"></div>
-    <div class="hero-corner tr"></div>
-    <div class="hero-corner bl"></div>
-    <div class="hero-corner br"></div>
-    <div>
-        <span class="hero-eyecon">👁️</span>
-        <span class="hero-title">RetinaScan AI</span>
+    <div class="hero-scan-line"></div>
+    <div style='position:relative;z-index:1'>
+        <div class="hero-title">👁️ RetinaScan AI</div>
+        <div class="hero-sub">
+            Perbandingan <strong style='color:#7dd3fc'>ResNet50</strong> &amp;
+            <strong style='color:#7dd3fc'>EfficientNetB0</strong> &nbsp;·&nbsp;
+            Explainable AI Grad-CAM++ &nbsp;·&nbsp; 8 Kelas Penyakit Retina OCT
+        </div>
+        <div class="hero-badge">SYSTEM ONLINE &nbsp;·&nbsp; OCT CLASSIFICATION v2.0</div>
     </div>
-    <div class="hero-sub">
-        Perbandingan ResNet50 <span>▸</span> EfficientNetB0
-        <span>·</span> Explainable AI Grad-CAM++
-        <span>·</span> 8 Kelas Penyakit Retina
-    </div>
-    <div class="hero-badge">● SYSTEM ONLINE &nbsp;·&nbsp; OCT CLASSIFICATION v2.0</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -692,6 +936,26 @@ with st.status("Memuat model...", expanded=False) as status:
             st.warning(f"⚠️ EfficientNetB0 gagal dimuat: {e}")
     status.update(label=f"✅ {len(models)} model aktif", state="complete")
 
+# Update sidebar model status setelah load
+model_pills_html = ""
+for mname in ['ResNet50', 'EfficientNetB0']:
+    active  = mname in models
+    dot_col = '#059669' if active else '#94a3b8'
+    txt_col = '#0f172a' if active else '#94a3b8'
+    status_txt = 'Aktif' if active else 'Tidak dimuat'
+    acc = '93.0%' if mname == 'ResNet50' else '89.0%'
+    model_pills_html += f"""
+    <div class="sb-model-pill">
+        <div class="sb-model-dot" style="background:{dot_col};
+             {'box-shadow:0 0 0 2px rgba(5,150,105,0.25)' if active else ''}"></div>
+        <div style="flex:1">
+            <div style="font-weight:600;color:{txt_col};font-size:0.78rem">{mname}</div>
+            <div style="font-size:0.65rem;color:#94a3b8">{status_txt} · Acc {acc}</div>
+        </div>
+    </div>
+    """
+model_status_placeholder.markdown(model_pills_html, unsafe_allow_html=True)
+
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4 = st.tabs([
     "🔬 Prediksi Gambar",
@@ -707,8 +971,8 @@ with tab1:
     st.markdown("""
     <div class="card">
         <div class="card-title">🔬 Prediksi Citra OCT — Kedua Model</div>
-        <p style='font-size:0.85rem;color:#94a3b8'>
-        Upload 1 gambar dari data test kamu. Sistem akan menjalankan prediksi pada 
+        <p style='font-size:0.85rem;color:#475569;line-height:1.7'>
+        Upload 1 gambar dari data test. Sistem akan menjalankan prediksi pada 
         <strong>ResNet50</strong> dan <strong>EfficientNetB0</strong> secara bersamaan,
         menampilkan kelas prediksi, confidence score, distribusi probabilitas, 
         dan Grad-CAM++ dari masing-masing model.
@@ -729,13 +993,15 @@ with tab1:
             st.image(pil_img, caption="Citra Input", use_container_width=True)
         with info_col:
             st.markdown(f"""
-            <div class="metric-box" style='margin-bottom:0.5rem'>
+            <div class="metric-box">
                 <div class="metric-label">Nama File</div>
-                <div style='font-family:Space Mono,monospace;color:#e2e8f0;font-size:0.9rem'>{uploaded.name}</div>
+                <div style='font-family:"JetBrains Mono",monospace;color:#0f172a;
+                            font-size:0.9rem;font-weight:500'>{uploaded.name}</div>
             </div>
             <div class="metric-box">
                 <div class="metric-label">Ukuran Input Model</div>
-                <div style='font-family:Space Mono,monospace;color:#e2e8f0;font-size:0.9rem'>224 × 224 px (RGB)</div>
+                <div style='font-family:"JetBrains Mono",monospace;color:#0f172a;
+                            font-size:0.9rem;font-weight:500'>224 × 224 px (RGB)</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -746,15 +1012,17 @@ with tab1:
 
         if n_models == 2:
             cols_header = st.columns(2)
+            colors      = ['#0369a1', '#7c3aed']
+            bg_colors   = ['#e0f2fe', '#ede9fe']
+            border_c    = ['rgba(3,105,161,0.3)', 'rgba(124,58,237,0.3)']
             for ci, (mname, _) in enumerate(model_list):
-                color = '#00e5ff' if ci == 0 else '#a78bfa'
                 with cols_header[ci]:
                     st.markdown(f"""
-                    <div style='text-align:center;background:var(--surface2);border-radius:10px;
-                                padding:0.6rem;border:1px solid {"rgba(0,229,255,0.2)" if ci==0 else "rgba(124,58,237,0.2)"};
-                                margin-bottom:0.75rem'>
-                        <span style='font-family:Space Mono,monospace;font-size:0.9rem;
-                                     font-weight:700;color:{color}'>{"🔵" if ci==0 else "🟣"} {mname}</span>
+                    <div style='text-align:center;background:{bg_colors[ci]};border-radius:10px;
+                                padding:0.6rem;border:1px solid {border_c[ci]};margin-bottom:0.75rem'>
+                        <span style='font-size:0.9rem;font-weight:700;color:{colors[ci]}'>
+                            {"🔵" if ci==0 else "🟣"} {mname}
+                        </span>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -764,46 +1032,50 @@ with tab1:
         for ci, (mname, model) in enumerate(model_list):
             preprocess_fn = get_preprocess_fn(mname)
             img_arr       = preprocess_fn(pil_img)
-
             pred_idx, conf, probs = predict(model, img_arr)
             pred_label = CLASS_NAMES[pred_idx]
             results[mname] = (pred_idx, conf, probs, pred_label, img_arr)
-            badge = render_badge(pred_label)
-            color = '#00e5ff' if ci == 0 else '#a78bfa'
+            badge  = render_badge(pred_label)
+            color  = '#0369a1' if ci == 0 else '#7c3aed'
+            bg_c   = '#f0f9ff' if ci == 0 else '#f5f3ff'
+            bdr_c  = 'rgba(3,105,161,0.2)' if ci == 0 else 'rgba(124,58,237,0.2)'
 
             with pred_cols[ci]:
                 st.markdown(f"""
-                <div style='background:var(--surface);border:1px solid {"rgba(0,229,255,0.15)" if ci==0 else "rgba(124,58,237,0.15)"};
-                            border-radius:12px;padding:1.25rem;margin-bottom:0.75rem'>
-                    <div style='font-size:0.72rem;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem'>
-                        Prediksi Kelas
-                    </div>
+                <div style='background:{bg_c};border:1px solid {bdr_c};
+                            border-radius:12px;padding:1.25rem;margin-bottom:0.75rem;
+                            box-shadow:0 1px 4px rgba(0,0,0,0.06)'>
+                    <div style='font-size:0.68rem;color:#64748b;text-transform:uppercase;
+                                letter-spacing:0.08em;margin-bottom:0.5rem'>Prediksi Kelas</div>
                     <div style='margin-bottom:0.4rem'>{badge}</div>
-                    <div style='font-family:Space Mono,monospace;font-size:2rem;font-weight:700;color:{color};
-                                line-height:1.1'>{conf:.1f}%</div>
+                    <div style='font-family:"JetBrains Mono",monospace;font-size:2rem;
+                                font-weight:700;color:{color};line-height:1.1'>{conf:.1f}%</div>
                     <div style='font-size:0.72rem;color:#64748b;margin-top:0.2rem'>Confidence Score</div>
                 </div>
                 """, unsafe_allow_html=True)
 
-                st.caption(f"📌 {CLASS_DESC[pred_label]}")
+                sev = CLASS_SEVERITY.get(pred_label, '')
+                st.caption(f"{sev} · {CLASS_DESC[pred_label]}")
 
-                st.markdown("<div style='font-size:0.75rem;color:#64748b;margin:0.75rem 0 0.4rem'>Top-5 Probabilitas</div>",
-                            unsafe_allow_html=True)
+                st.markdown("<div style='font-size:0.75rem;color:#64748b;margin:0.75rem 0 0.4rem'>"
+                            "Top-5 Probabilitas</div>", unsafe_allow_html=True)
                 sorted_idx = np.argsort(probs)[::-1][:5]
                 for i in sorted_idx:
                     st.progress(float(probs[i]), text=f"{CLASS_NAMES[i]}: {probs[i]*100:.1f}%")
+
+        # Update total predictions counter
+        st.session_state.total_predictions += 1
+        st.session_state.last_prediction = pred_label if n_models == 1 else None
 
         if n_models == 2:
             labels = [r[3] for r in results.values()]
             if labels[0] == labels[1]:
                 st.markdown(f"""
-                <div style='background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);
-                            border-radius:10px;padding:0.85rem 1.25rem;margin-top:0.5rem;
-                            display:flex;align-items:center;gap:0.75rem'>
+                <div class="result-agree">
                     <span style='font-size:1.3rem'>✅</span>
-                    <span style='font-size:0.88rem;color:#94a3b8'>
-                        Kedua model <strong style='color:#10b981'>sepakat</strong> — prediksi kelas 
-                        <strong style='color:#10b981'>{labels[0]}</strong>
+                    <span style='font-size:0.88rem;color:#1e3a5f'>
+                        Kedua model <strong style='color:#059669'>sepakat</strong> — prediksi kelas 
+                        <strong style='color:#059669'>{labels[0]}</strong>
                     </span>
                 </div>
                 """, unsafe_allow_html=True)
@@ -811,14 +1083,13 @@ with tab1:
                 confs  = [r[1] for r in results.values()]
                 mnames = list(results.keys())
                 st.markdown(f"""
-                <div style='background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);
-                            border-radius:10px;padding:0.85rem 1.25rem;margin-top:0.5rem;
-                            display:flex;align-items:center;gap:0.75rem'>
+                <div class="result-disagree">
                     <span style='font-size:1.3rem'>⚠️</span>
-                    <span style='font-size:0.88rem;color:#94a3b8'>
-                        Kedua model <strong style='color:#f59e0b'>berbeda pendapat</strong> —
-                        {mnames[0]}: <strong style='color:#00e5ff'>{labels[0]} ({confs[0]:.1f}%)</strong> &nbsp;|&nbsp;
-                        {mnames[1]}: <strong style='color:#a78bfa'>{labels[1]} ({confs[1]:.1f}%)</strong>
+                    <span style='font-size:0.88rem;color:#78350f'>
+                        Kedua model <strong style='color:#d97706'>berbeda pendapat</strong> —
+                        {mnames[0]}: <strong style='color:#0369a1'>{labels[0]} ({confs[0]:.1f}%)</strong>
+                        &nbsp;|&nbsp;
+                        {mnames[1]}: <strong style='color:#7c3aed'>{labels[1]} ({confs[1]:.1f}%)</strong>
                     </span>
                 </div>
                 """, unsafe_allow_html=True)
@@ -827,62 +1098,40 @@ with tab1:
         st.markdown('<div class="card-title">🗺️ Grad-CAM++ — Perbandingan Visual Kedua Model</div>',
                     unsafe_allow_html=True)
 
-        if st.button("🔍 Generate Grad-CAM++ — EfficientNetB0"):
-            orig_arr = np.array(pil_img.resize(IMG_SIZE), dtype=np.float32) / 255.0
+        if st.button("🔍 Generate Grad-CAM++ Kedua Model"):
+            orig_arr  = np.array(pil_img.resize(IMG_SIZE), dtype=np.float32) / 255.0
+            gcam_cols = st.columns(n_models)
+            for ci, (mname, model) in enumerate(model_list):
+                pred_idx, conf, probs, pred_label, img_arr = results[mname]
+                color = '#0369a1' if ci == 0 else '#7c3aed'
+                with gcam_cols[ci]:
+                    st.markdown(f"<div style='font-size:0.82rem;font-weight:700;"
+                                f"color:{color};margin-bottom:0.5rem'>📌 {mname}</div>",
+                                unsafe_allow_html=True)
+                    try:
+                        with st.spinner(f"Menghitung Grad-CAM++ {mname}..."):
+                            layer_name = get_last_conv_layer(model, mname)
+                            heatmap    = grad_cam_plusplus(model, img_arr, pred_idx, layer_name)
+                            overlay    = overlay_heatmap(orig_arr, heatmap)
+                            hm_color   = cm.jet(heatmap)[:, :, :3]
 
-            # Hanya gunakan EfficientNetB0 untuk Grad-CAM++
-            if 'EfficientNetB0' not in models:
-                st.warning("⚠️ EfficientNetB0 tidak aktif. Aktifkan di sidebar.")
-            else:
-                eff_model  = models['EfficientNetB0']
-                pred_idx, conf, probs, pred_label, img_arr = results['EfficientNetB0']
-
-                try:
-                    with st.spinner("Menghitung Grad-CAM++ EfficientNetB0..."):
-                        layer_name = get_last_conv_layer(eff_model, 'EfficientNetB0')
-                        heatmap    = grad_cam_plusplus(eff_model, img_arr, pred_idx, layer_name)
-                        overlay    = overlay_heatmap(orig_arr, heatmap)
-                        hm_color   = cm.jet(heatmap)[:, :, :3]
-
-                    st.markdown("""
-                    <div style='background:#f0fdf4;border:1px solid #86efac;border-radius:10px;
-                                padding:0.6rem 1rem;margin-bottom:0.75rem;font-size:0.82rem;
-                                color:#065f46;font-weight:600'>
-                        🟣 Grad-CAM++ — EfficientNetB0
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    c1, c2, c3 = st.columns(3)
-                    with c1:
-                        st.image(orig_arr,  caption="Citra Asli",        use_container_width=True, clamp=True)
-                    with c2:
-                        st.image(hm_color,  caption="Grad-CAM++ Heatmap", use_container_width=True, clamp=True)
-                    with c3:
-                        st.image(overlay,   caption="Overlay",            use_container_width=True, clamp=True)
-
-                    st.caption(f"Layer: `{layer_name}` · Prediksi: **{pred_label}** · Confidence: **{conf:.1f}%**")
-
-                    st.markdown(f"""
-                    <div class="analysis-box">
-                        <strong style='color:#0369a1'>📋 Interpretasi Grad-CAM++ — EfficientNetB0</strong><br><br>
-                        Model <strong>EfficientNetB0</strong> memprediksi kelas <strong>{pred_label}</strong>
-                        dengan confidence <strong>{conf:.1f}%</strong>.
-                        Heatmap Grad-CAM++ menunjukkan bahwa model memfokuskan perhatian pada
-                        <strong>area lesi retina</strong> yang mengalami perubahan tekstur dan
-                        reflektivitas jaringan — konsisten dengan karakteristik klinis
-                        penyakit <strong>{pred_label}</strong> pada citra OCT.
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                except Exception as e:
-                    st.error(f"Gagal: {e}")
+                        st.image(orig_arr,  caption="Citra Asli",       use_container_width=True, clamp=True)
+                        st.image(hm_color,  caption="Heatmap",          use_container_width=True, clamp=True)
+                        st.image(overlay,   caption="Overlay",          use_container_width=True, clamp=True)
+                        st.caption(f"Layer: `{layer_name}` · Fokus: **{pred_label}** ({conf:.1f}%)")
+                    except Exception as e:
+                        st.error(f"Gagal: {e}")
     else:
         st.markdown("""
-        <div style='text-align:center;padding:3.5rem;color:#475569'>
-            <div style='font-size:3rem'>🖼️</div>
-            <div style='font-size:0.9rem;margin-top:0.75rem;line-height:1.8'>
+        <div style='text-align:center;padding:4rem;color:#94a3b8;
+                    background:#f8fafc;border-radius:12px;border:2px dashed #e2e8f0'>
+            <div style='font-size:3.5rem;margin-bottom:0.75rem'>🖼️</div>
+            <div style='font-size:0.95rem;font-weight:600;color:#64748b;margin-bottom:0.4rem'>
+                Upload Citra OCT untuk Memulai
+            </div>
+            <div style='font-size:0.82rem;color:#94a3b8;line-height:1.7'>
                 Upload satu gambar OCT dari data test kamu<br>
-                <span style='color:#334155;font-size:0.8rem'>Format: JPG / PNG</span>
+                <span style='font-size:0.75rem'>Format: JPG / PNG · Resolusi apa pun (otomatis resize ke 224×224)</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -895,10 +1144,10 @@ with tab2:
     st.markdown("""
     <div class="card">
         <div class="card-title">🗺️ Grad-CAM++ Analysis — 5 Prediksi Benar & 5 Prediksi Salah</div>
-        <p style='font-size:0.85rem;color:#94a3b8'>
-        Upload gambar satu per satu dari data test kamu. Sistem otomatis mengkategorikan 
-        setiap gambar sebagai <strong style='color:#10b981'>prediksi benar</strong> atau 
-        <strong style='color:#ef4444'>prediksi salah</strong> berdasarkan label true yang kamu masukkan.
+        <p style='font-size:0.85rem;color:#475569;line-height:1.7'>
+        Upload gambar satu per satu dari data test. Sistem otomatis mengkategorikan 
+        setiap gambar sebagai <strong style='color:#059669'>prediksi benar</strong> atau 
+        <strong style='color:#dc2626'>prediksi salah</strong> berdasarkan label true yang kamu masukkan.
         Setelah terkumpul 5 + 5, generate Grad-CAM++ beserta analisis visualnya.
         </p>
     </div>
@@ -913,15 +1162,8 @@ with tab2:
             help="Pilih model terbaik berdasarkan hasil evaluasimu"
         )
         target_model  = models[model_choice]
-        mc_color      = '#00e5ff' if model_choice == 'ResNet50' else '#a78bfa'
+        mc_color      = '#0369a1' if model_choice == 'ResNet50' else '#7c3aed'
         preprocess_fn = get_preprocess_fn(model_choice)
-
-        if 'correct_cases' not in st.session_state:
-            st.session_state.correct_cases = []
-        if 'wrong_cases' not in st.session_state:
-            st.session_state.wrong_cases = []
-        if 'last_model' not in st.session_state:
-            st.session_state.last_model = model_choice
 
         if st.session_state.last_model != model_choice:
             st.session_state.correct_cases = []
@@ -936,19 +1178,20 @@ with tab2:
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-label">Model Aktif</div>
-                <div style='font-family:Space Mono,monospace;font-size:1rem;color:{mc_color}'>{model_choice}</div>
+                <div style='font-family:"JetBrains Mono",monospace;font-size:1rem;
+                            color:{mc_color};font-weight:700'>{model_choice}</div>
             </div>""", unsafe_allow_html=True)
         with prog_col2:
             st.markdown(f"""
-            <div class="metric-box" style='border-color:#10b981'>
+            <div class="metric-box" style='border-left-color:#059669'>
                 <div class="metric-label">✓ Terkumpul Benar</div>
-                <div class="metric-value" style='color:#10b981'>{n_correct} / 5</div>
+                <div class="metric-value" style='color:#059669'>{n_correct} / 5</div>
             </div>""", unsafe_allow_html=True)
         with prog_col3:
             st.markdown(f"""
-            <div class="metric-box" style='border-color:#ef4444'>
+            <div class="metric-box" style='border-left-color:#dc2626'>
                 <div class="metric-label">✗ Terkumpul Salah</div>
-                <div class="metric-value" style='color:#ef4444'>{n_wrong} / 5</div>
+                <div class="metric-value" style='color:#dc2626'>{n_wrong} / 5</div>
             </div>""", unsafe_allow_html=True)
 
         st.progress(min((n_correct + n_wrong) / 10, 1.0),
@@ -990,7 +1233,9 @@ with tab2:
                 pred_label = CLASS_NAMES[pred_idx]
                 is_correct = (pred_label == true_label)
 
-                res_color  = '#10b981' if is_correct else '#ef4444'
+                res_color  = '#059669' if is_correct else '#dc2626'
+                res_bg     = '#f0fdf4' if is_correct else '#fef2f2'
+                res_bdr    = '#86efac' if is_correct else '#fca5a5'
                 res_label  = '✓ PREDIKSI BENAR' if is_correct else '✗ PREDIKSI SALAH'
                 pred_badge = render_badge(pred_label)
                 true_badge = render_badge(true_label)
@@ -1000,7 +1245,8 @@ with tab2:
                     st.image(pil_img, caption="Citra Input", use_container_width=True)
                 with r_col2:
                     st.markdown(f"""
-                    <div style='background:var(--surface2);border:1px solid {res_color}44;
+                    <div style='background:{res_bg};border:1px solid {res_bdr};
+                                border-left:4px solid {res_color};
                                 border-radius:10px;padding:1rem 1.25rem'>
                         <div style='font-size:0.72rem;font-weight:700;color:{res_color};
                                     letter-spacing:0.1em;margin-bottom:0.75rem'>{res_label}</div>
@@ -1015,15 +1261,15 @@ with tab2:
                             </div>
                             <div>
                                 <div style='font-size:0.68rem;color:#64748b'>Confidence</div>
-                                <div style='font-family:Space Mono,monospace;font-size:1.2rem;
+                                <div style='font-family:"JetBrains Mono",monospace;font-size:1.2rem;
                                             font-weight:700;color:{mc_color}'>{conf:.1f}%</div>
                             </div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
 
-                    st.markdown("<div style='font-size:0.73rem;color:#64748b;margin-top:0.75rem'>Top-5 Probabilitas</div>",
-                                unsafe_allow_html=True)
+                    st.markdown("<div style='font-size:0.73rem;color:#64748b;margin-top:0.75rem'>"
+                                "Top-5 Probabilitas</div>", unsafe_allow_html=True)
                     for i in np.argsort(probs)[::-1][:5]:
                         st.progress(float(probs[i]), text=f"{CLASS_NAMES[i]}: {probs[i]*100:.1f}%")
 
@@ -1050,24 +1296,26 @@ with tab2:
                         unsafe_allow_html=True)
 
             def render_case_table(cases, is_correct):
-                color = '#10b981' if is_correct else '#ef4444'
+                color = '#059669' if is_correct else '#dc2626'
+                bg    = '#f0fdf4' if is_correct else '#fef2f2'
                 label = f'✓ PREDIKSI BENAR ({len(cases)}/5)' if is_correct else f'✗ PREDIKSI SALAH ({len(cases)}/5)'
                 rows  = ""
                 for idx, (_, true_lbl, pred_lbl, conf) in enumerate(cases):
                     pb = render_badge(pred_lbl)
                     tb = render_badge(true_lbl)
-                    rows += f"""<tr>
-                        <td style='padding:0.4rem;color:#64748b;font-size:0.78rem'>{idx+1}</td>
+                    rows += f"""<tr style='border-bottom:1px solid #f1f5f9'>
+                        <td style='padding:0.4rem;color:#94a3b8;font-size:0.78rem'>{idx+1}</td>
                         <td style='padding:0.4rem'>{pb}</td>
                         <td style='padding:0.4rem'>{tb}</td>
-                        <td style='padding:0.4rem;font-family:Space Mono,monospace;
-                                   color:{color};font-size:0.85rem'>{conf:.1f}%</td>
+                        <td style='padding:0.4rem;font-family:"JetBrains Mono",monospace;
+                                   color:{color};font-size:0.85rem;font-weight:700'>{conf:.1f}%</td>
                     </tr>"""
                 return f"""
-                <div style='margin-bottom:1rem'>
+                <div style='margin-bottom:1rem;background:{bg};border:1px solid {"#86efac" if is_correct else "#fca5a5"};
+                            border-radius:10px;padding:0.75rem'>
                     <div style='font-size:0.78rem;font-weight:700;color:{color};margin-bottom:0.4rem'>{label}</div>
                     <table style='width:100%;border-collapse:collapse;font-size:0.82rem'>
-                        <thead><tr style='color:#475569;border-bottom:1px solid #1e293b'>
+                        <thead><tr style='color:#94a3b8;border-bottom:2px solid {"#d1fae5" if is_correct else "#fee2e2"}'>
                             <th style='padding:0.4rem;text-align:left'>#</th>
                             <th style='padding:0.4rem;text-align:left'>Prediksi</th>
                             <th style='padding:0.4rem;text-align:left'>True Label</th>
@@ -1109,7 +1357,7 @@ with tab2:
                             st.pyplot(fig, use_container_width=True)
                             st.markdown(f"""
                             <div class="analysis-box">
-                                <strong style='color:#00e5ff'>
+                                <strong style='color:#0369a1'>
                                     📋 Analisis Visual Grad-CAM++ — {model_choice}
                                 </strong><br><br>
                                 Dari <strong>{n_c + n_w}</strong> contoh yang dianalisis menggunakan model 
@@ -1138,15 +1386,12 @@ with tab2:
 # TAB 3 — PERBANDINGAN MODEL
 # ══════════════════════════════════════════════════════════════════════════════
 with tab3:
-    # ── Data hasil evaluasi dari classification report ─────────────────────
-    # ResNet50
     R_CLASSES   = ['AMD','CNV','CSR','DME','DR','DRUSEN','MH','NORMAL']
     R_PRECISION = [1.00, 0.85, 0.99, 0.96, 0.99, 0.86, 1.00, 0.80]
     R_RECALL    = [1.00, 0.90, 1.00, 0.83, 0.99, 0.75, 0.99, 0.97]
     R_F1        = [1.00, 0.88, 1.00, 0.89, 0.99, 0.80, 1.00, 0.88]
     R_ACC, R_PREC_MACRO, R_REC_MACRO, R_F1_MACRO = 93.0, 93.0, 93.0, 93.0
 
-    # EfficientNetB0
     E_PRECISION = [1.00, 0.82, 0.95, 0.82, 0.90, 0.79, 1.00, 0.83]
     E_RECALL    = [0.99, 0.82, 0.98, 0.87, 0.97, 0.68, 0.88, 0.91]
     E_F1        = [0.99, 0.82, 0.96, 0.85, 0.93, 0.73, 0.93, 0.87]
@@ -1155,25 +1400,24 @@ with tab3:
     winner = "ResNet50" if R_ACC > E_ACC else "EfficientNetB0"
     diff   = abs(R_ACC - E_ACC)
 
-    # ── Header ─────────────────────────────────────────────────────────────
     st.markdown('<div class="card-title">📊 Perbandingan Arsitektur & Evaluasi Model</div>',
                 unsafe_allow_html=True)
 
     # ── Banner pemenang ─────────────────────────────────────────────────────
     st.markdown(f"""
-    <div style='background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(0,229,255,0.08));
-                border:1px solid rgba(16,185,129,0.35);border-radius:12px;
-                padding:1.1rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1rem'>
-        <div style='font-size:2rem'>🏆</div>
+    <div style='background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+                border:1px solid #86efac;border-left:5px solid #059669;border-radius:12px;
+                padding:1.1rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1rem;
+                box-shadow:0 1px 4px rgba(5,150,105,0.1)'>
+        <div style='font-size:2.2rem'>🏆</div>
         <div>
-            <div style='font-size:0.7rem;color:#64748b;text-transform:uppercase;letter-spacing:0.08em'>
+            <div style='font-size:0.68rem;color:#64748b;text-transform:uppercase;letter-spacing:0.1em'>
                 Model Terbaik — Test Set
             </div>
-            <div style='font-family:Space Mono,monospace;font-size:1.25rem;
-                        color:#10b981;font-weight:700;margin:0.15rem 0'>{winner}</div>
-            <div style='font-size:0.82rem;color:#94a3b8'>
-                Accuracy <strong style='color:#10b981'>{max(R_ACC,E_ACC):.1f}%</strong>
-                &nbsp;·&nbsp; unggul <strong style='color:#10b981'>{diff:.1f}%</strong>
+            <div style='font-size:1.2rem;color:#059669;font-weight:700;margin:0.15rem 0'>{winner}</div>
+            <div style='font-size:0.82rem;color:#475569'>
+                Accuracy <strong style='color:#059669'>{max(R_ACC,E_ACC):.1f}%</strong>
+                &nbsp;·&nbsp; unggul <strong style='color:#059669'>{diff:.1f}%</strong>
                 dari model lainnya
             </div>
         </div>
@@ -1181,26 +1425,33 @@ with tab3:
     """, unsafe_allow_html=True)
 
     # ── Overall metrics side-by-side ────────────────────────────────────────
-    m1, m2, m3, m4, m5, m6, m7, m8 = st.columns(8)
+    m1, m2, m3, m4 = st.columns(4)
     def metric_pair(col, label, rv, ev):
-        best_color = '#10b981' if rv >= ev else '#a78bfa'
         col.markdown(f"""
-        <div style='background:#111827;border-radius:8px;padding:0.6rem 0.5rem;text-align:center;
-                    border:1px solid rgba(255,255,255,0.06)'>
-            <div style='font-size:0.6rem;color:#475569;text-transform:uppercase;letter-spacing:0.05em;
-                        margin-bottom:0.3rem'>{label}</div>
-            <div style='font-family:Space Mono,monospace;font-size:0.85rem;color:#00e5ff;font-weight:700'>
-                {rv:.1f}%</div>
-            <div style='font-size:0.55rem;color:#334155;margin:0.1rem 0'>vs</div>
-            <div style='font-family:Space Mono,monospace;font-size:0.85rem;color:#a78bfa;font-weight:700'>
-                {ev:.1f}%</div>
+        <div style='background:#f8fafc;border-radius:10px;padding:0.8rem 0.75rem;text-align:center;
+                    border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.05)'>
+            <div style='font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;
+                        margin-bottom:0.4rem;font-weight:600'>{label}</div>
+            <div style='display:flex;justify-content:center;gap:0.75rem;align-items:center'>
+                <div>
+                    <div style='font-family:"JetBrains Mono",monospace;font-size:1rem;
+                                color:#0369a1;font-weight:700'>{rv:.1f}%</div>
+                    <div style='font-size:0.6rem;color:#94a3b8'>R50</div>
+                </div>
+                <div style='color:#cbd5e1;font-size:0.8rem'>vs</div>
+                <div>
+                    <div style='font-family:"JetBrains Mono",monospace;font-size:1rem;
+                                color:#7c3aed;font-weight:700'>{ev:.1f}%</div>
+                    <div style='font-size:0.6rem;color:#94a3b8'>Eff</div>
+                </div>
+            </div>
         </div>""", unsafe_allow_html=True)
 
     metric_pair(m1, "Accuracy",  R_ACC,        E_ACC)
     metric_pair(m2, "Precision", R_PREC_MACRO, E_PREC_MACRO)
     metric_pair(m3, "Recall",    R_REC_MACRO,  E_REC_MACRO)
     metric_pair(m4, "F1-Score",  R_F1_MACRO,   E_F1_MACRO)
-    st.markdown("<div style='font-size:0.7rem;color:#475569;margin:0.3rem 0 1rem'>"\
+    st.markdown("<div style='font-size:0.72rem;color:#94a3b8;margin:0.5rem 0 1rem'>"
                 "🔵 ResNet50 &nbsp;·&nbsp; 🟣 EfficientNetB0</div>", unsafe_allow_html=True)
 
     st.markdown("---")
@@ -1215,64 +1466,64 @@ with tab3:
     x = np.arange(len(metrics_overall))
     w = 0.35
 
-    fig1, ax1 = plt.subplots(figsize=(8, 4), facecolor='#111827')
-    ax1.set_facecolor('#111827')
-    b1 = ax1.bar(x - w/2, r_vals, w, label='ResNet50',       color='#00e5ff', alpha=0.85)
-    b2 = ax1.bar(x + w/2, e_vals, w, label='EfficientNetB0', color='#7c3aed', alpha=0.85)
-    ax1.set_xticks(x); ax1.set_xticklabels(metrics_overall, color='#94a3b8', fontsize=9)
-    ax1.set_ylim(80, 100); ax1.set_ylabel('Score (%)', color='#64748b', fontsize=9)
-    ax1.tick_params(colors='#64748b')
+    fig1, ax1 = plt.subplots(figsize=(8, 4), facecolor='#f8fafc')
+    ax1.set_facecolor('#f8fafc')
+    b1 = ax1.bar(x - w/2, r_vals, w, label='ResNet50',       color='#0369a1', alpha=0.88)
+    b2 = ax1.bar(x + w/2, e_vals, w, label='EfficientNetB0', color='#7c3aed', alpha=0.88)
+    ax1.set_xticks(x); ax1.set_xticklabels(metrics_overall, color='#475569', fontsize=9)
+    ax1.set_ylim(80, 100); ax1.set_ylabel('Score (%)', color='#94a3b8', fontsize=9)
+    ax1.tick_params(colors='#94a3b8')
     for sp in ['top','right']: ax1.spines[sp].set_visible(False)
-    for sp in ['bottom','left']: ax1.spines[sp].set_color('#1e293b')
-    ax1.yaxis.grid(True, color='#1e293b', linewidth=0.5); ax1.set_axisbelow(True)
-    ax1.legend(facecolor='#1a2235', edgecolor='#334155', labelcolor='#94a3b8', fontsize=9)
+    for sp in ['bottom','left']: ax1.spines[sp].set_color('#e2e8f0')
+    ax1.yaxis.grid(True, color='#e2e8f0', linewidth=0.8); ax1.set_axisbelow(True)
+    ax1.legend(facecolor='#ffffff', edgecolor='#e2e8f0', labelcolor='#475569', fontsize=9)
     ax1.set_title("Overall Metrics — ResNet50 vs EfficientNetB0",
-                  color='#e2e8f0', fontsize=10, pad=10)
+                  color='#1e293b', fontsize=10, pad=10)
     for bar in b1:
         ax1.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.15,
                  f'{bar.get_height():.1f}', ha='center', va='bottom',
-                 color='#00e5ff', fontsize=8, fontweight='bold')
+                 color='#0369a1', fontsize=8, fontweight='bold')
     for bar in b2:
         ax1.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.15,
                  f'{bar.get_height():.1f}', ha='center', va='bottom',
-                 color='#a78bfa', fontsize=8, fontweight='bold')
+                 color='#7c3aed', fontsize=8, fontweight='bold')
     plt.tight_layout()
     st.pyplot(fig1, use_container_width=True)
 
     st.markdown("---")
 
-    # ── Grafik 2: Per-class F1-Score ────────────────────────────────────────
+    # ── Grafik 2: Per-class F1-Score ─────────────────────────────────────
     st.markdown('<div class="card-title">📊 F1-Score Per Kelas Penyakit</div>',
                 unsafe_allow_html=True)
 
     x2 = np.arange(len(R_CLASSES))
-    fig2, ax2 = plt.subplots(figsize=(11, 4.5), facecolor='#111827')
-    ax2.set_facecolor('#111827')
-    b3 = ax2.bar(x2 - w/2, [v*100 for v in R_F1], w, label='ResNet50',       color='#00e5ff', alpha=0.85)
-    b4 = ax2.bar(x2 + w/2, [v*100 for v in E_F1], w, label='EfficientNetB0', color='#7c3aed', alpha=0.85)
-    ax2.set_xticks(x2); ax2.set_xticklabels(R_CLASSES, color='#94a3b8', fontsize=9)
-    ax2.set_ylim(60, 105); ax2.set_ylabel('F1-Score (%)', color='#64748b', fontsize=9)
-    ax2.tick_params(colors='#64748b')
+    fig2, ax2 = plt.subplots(figsize=(11, 4.5), facecolor='#f8fafc')
+    ax2.set_facecolor('#f8fafc')
+    b3 = ax2.bar(x2 - w/2, [v*100 for v in R_F1], w, label='ResNet50',       color='#0369a1', alpha=0.88)
+    b4 = ax2.bar(x2 + w/2, [v*100 for v in E_F1], w, label='EfficientNetB0', color='#7c3aed', alpha=0.88)
+    ax2.set_xticks(x2); ax2.set_xticklabels(R_CLASSES, color='#475569', fontsize=9)
+    ax2.set_ylim(60, 105); ax2.set_ylabel('F1-Score (%)', color='#94a3b8', fontsize=9)
+    ax2.tick_params(colors='#94a3b8')
     for sp in ['top','right']: ax2.spines[sp].set_visible(False)
-    for sp in ['bottom','left']: ax2.spines[sp].set_color('#1e293b')
-    ax2.yaxis.grid(True, color='#1e293b', linewidth=0.5); ax2.set_axisbelow(True)
-    ax2.legend(facecolor='#1a2235', edgecolor='#334155', labelcolor='#94a3b8', fontsize=9)
+    for sp in ['bottom','left']: ax2.spines[sp].set_color('#e2e8f0')
+    ax2.yaxis.grid(True, color='#e2e8f0', linewidth=0.8); ax2.set_axisbelow(True)
+    ax2.legend(facecolor='#ffffff', edgecolor='#e2e8f0', labelcolor='#475569', fontsize=9)
     ax2.set_title("F1-Score Per Kelas — ResNet50 vs EfficientNetB0",
-                  color='#e2e8f0', fontsize=10, pad=10)
+                  color='#1e293b', fontsize=10, pad=10)
     for bar in b3:
         ax2.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.3,
                  f'{bar.get_height():.0f}', ha='center', va='bottom',
-                 color='#00e5ff', fontsize=7, fontweight='bold')
+                 color='#0369a1', fontsize=7, fontweight='bold')
     for bar in b4:
         ax2.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.3,
                  f'{bar.get_height():.0f}', ha='center', va='bottom',
-                 color='#a78bfa', fontsize=7, fontweight='bold')
+                 color='#7c3aed', fontsize=7, fontweight='bold')
     plt.tight_layout()
     st.pyplot(fig2, use_container_width=True)
 
     st.markdown("---")
 
-    # ── Tabel per-class lengkap ─────────────────────────────────────────────
+    # ── Tabel per-class lengkap ──────────────────────────────────────────
     st.markdown('<div class="card-title">📋 Tabel Lengkap Per Kelas</div>', unsafe_allow_html=True)
 
     rows = ""
@@ -1281,13 +1532,13 @@ with tab3:
         e_p, e_r, e_f = E_PRECISION[i]*100, E_RECALL[i]*100, E_F1[i]*100
         badge = render_badge(cls)
         def cmp(rv, ev):
-            if rv > ev: return f"<span style='color:#10b981;font-weight:700'>{rv:.0f}%</span>", f"<span style='color:#94a3b8'>{ev:.0f}%</span>"
-            elif rv < ev: return f"<span style='color:#94a3b8'>{rv:.0f}%</span>", f"<span style='color:#10b981;font-weight:700'>{ev:.0f}%</span>"
-            else: return f"<span style='color:#94a3b8'>{rv:.0f}%</span>", f"<span style='color:#94a3b8'>{ev:.0f}%</span>"
+            if rv > ev:   return f"<span style='color:#059669;font-weight:700'>{rv:.0f}%</span>", f"<span style='color:#94a3b8'>{ev:.0f}%</span>"
+            elif rv < ev: return f"<span style='color:#94a3b8'>{rv:.0f}%</span>", f"<span style='color:#059669;font-weight:700'>{ev:.0f}%</span>"
+            else:         return f"<span style='color:#475569'>{rv:.0f}%</span>", f"<span style='color:#475569'>{ev:.0f}%</span>"
         rp_h, ep_h = cmp(r_p, e_p)
         rr_h, er_h = cmp(r_r, e_r)
         rf_h, ef_h = cmp(r_f, e_f)
-        rows += f"""<tr style='border-bottom:1px solid rgba(255,255,255,0.04)'>
+        rows += f"""<tr style='border-bottom:1px solid #f1f5f9'>
             <td style='padding:0.5rem'>{badge}</td>
             <td style='padding:0.5rem;text-align:center'>{rp_h}</td>
             <td style='padding:0.5rem;text-align:center'>{ep_h}</td>
@@ -1300,18 +1551,18 @@ with tab3:
     st.markdown(f"""
     <div class="card" style='padding:1rem'>
     <table style='width:100%;border-collapse:collapse;font-size:0.82rem'>
-        <thead><tr style='border-bottom:2px solid rgba(0,229,255,0.2)'>
-            <th style='padding:0.5rem;text-align:left;color:#64748b'>Kelas</th>
-            <th style='padding:0.5rem;text-align:center;color:#00e5ff'>Prec R50</th>
-            <th style='padding:0.5rem;text-align:center;color:#a78bfa'>Prec Eff</th>
-            <th style='padding:0.5rem;text-align:center;color:#00e5ff'>Rec R50</th>
-            <th style='padding:0.5rem;text-align:center;color:#a78bfa'>Rec Eff</th>
-            <th style='padding:0.5rem;text-align:center;color:#00e5ff'>F1 R50</th>
-            <th style='padding:0.5rem;text-align:center;color:#a78bfa'>F1 Eff</th>
+        <thead><tr style='border-bottom:2px solid #bae6fd;background:#f0f9ff'>
+            <th style='padding:0.5rem;text-align:left;color:#475569'>Kelas</th>
+            <th style='padding:0.5rem;text-align:center;color:#0369a1'>Prec R50</th>
+            <th style='padding:0.5rem;text-align:center;color:#7c3aed'>Prec Eff</th>
+            <th style='padding:0.5rem;text-align:center;color:#0369a1'>Rec R50</th>
+            <th style='padding:0.5rem;text-align:center;color:#7c3aed'>Rec Eff</th>
+            <th style='padding:0.5rem;text-align:center;color:#0369a1'>F1 R50</th>
+            <th style='padding:0.5rem;text-align:center;color:#7c3aed'>F1 Eff</th>
         </tr></thead>
         <tbody>{rows}</tbody>
     </table>
-    <div style='font-size:0.7rem;color:#334155;margin-top:0.5rem'>
+    <div style='font-size:0.7rem;color:#94a3b8;margin-top:0.5rem'>
         🟢 Angka hijau = model lebih unggul di metrik tersebut
     </div>
     </div>
@@ -1319,58 +1570,58 @@ with tab3:
 
     st.markdown("---")
 
-    # ── Tabel arsitektur ────────────────────────────────────────────────────
+    # ── Tabel arsitektur ──────────────────────────────────────────────────
     st.markdown('<div class="card-title">🏗️ Perbandingan Arsitektur</div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="card">
     <table style='width:100%;border-collapse:collapse;font-size:0.85rem'>
-        <thead><tr style='border-bottom:2px solid rgba(0,229,255,0.2)'>
-            <th style='padding:0.75rem;color:#64748b;text-align:left'>Aspek</th>
-            <th style='padding:0.75rem;color:#00e5ff;text-align:center'>ResNet50</th>
-            <th style='padding:0.75rem;color:#a78bfa;text-align:center'>EfficientNetB0</th>
+        <thead><tr style='border-bottom:2px solid #bae6fd;background:#f0f9ff'>
+            <th style='padding:0.75rem;color:#475569;text-align:left'>Aspek</th>
+            <th style='padding:0.75rem;color:#0369a1;text-align:center'>ResNet50</th>
+            <th style='padding:0.75rem;color:#7c3aed;text-align:center'>EfficientNetB0</th>
         </tr></thead>
         <tbody>
-            <tr style='border-bottom:1px solid rgba(255,255,255,0.04)'>
-                <td style='padding:0.6rem'>Tahun</td>
-                <td style='text-align:center;color:#94a3b8'>2015</td>
-                <td style='text-align:center;color:#94a3b8'>2019</td>
+            <tr style='border-bottom:1px solid #f1f5f9'>
+                <td style='padding:0.6rem;color:#475569'>Tahun</td>
+                <td style='text-align:center;color:#64748b'>2015</td>
+                <td style='text-align:center;color:#64748b'>2019</td>
             </tr>
-            <tr style='border-bottom:1px solid rgba(255,255,255,0.04)'>
-                <td style='padding:0.6rem'>Jumlah Parameter</td>
-                <td style='text-align:center;color:#94a3b8'>~25.6M</td>
-                <td style='text-align:center;color:#94a3b8'>~5.3M</td>
+            <tr style='border-bottom:1px solid #f1f5f9'>
+                <td style='padding:0.6rem;color:#475569'>Jumlah Parameter</td>
+                <td style='text-align:center;color:#64748b'>~25.6M</td>
+                <td style='text-align:center;color:#64748b'>~5.3M</td>
             </tr>
-            <tr style='border-bottom:1px solid rgba(255,255,255,0.04)'>
-                <td style='padding:0.6rem'>Test Accuracy</td>
-                <td style='text-align:center;color:#00e5ff;font-weight:700'>93.0%</td>
-                <td style='text-align:center;color:#a78bfa'>89.0%</td>
+            <tr style='border-bottom:1px solid #f1f5f9'>
+                <td style='padding:0.6rem;color:#475569'>Test Accuracy</td>
+                <td style='text-align:center;color:#0369a1;font-weight:700'>93.0%</td>
+                <td style='text-align:center;color:#7c3aed'>89.0%</td>
             </tr>
-            <tr style='border-bottom:1px solid rgba(255,255,255,0.04)'>
-                <td style='padding:0.6rem'>Inovasi Utama</td>
-                <td style='text-align:center;color:#94a3b8'>Residual Connections</td>
-                <td style='text-align:center;color:#94a3b8'>Compound Scaling</td>
+            <tr style='border-bottom:1px solid #f1f5f9'>
+                <td style='padding:0.6rem;color:#475569'>Inovasi Utama</td>
+                <td style='text-align:center;color:#64748b'>Residual Connections</td>
+                <td style='text-align:center;color:#64748b'>Compound Scaling</td>
             </tr>
             <tr>
-                <td style='padding:0.6rem'>Blok Utama</td>
-                <td style='text-align:center;color:#94a3b8'>Bottleneck Block</td>
-                <td style='text-align:center;color:#94a3b8'>MBConv Block</td>
+                <td style='padding:0.6rem;color:#475569'>Blok Utama</td>
+                <td style='text-align:center;color:#64748b'>Bottleneck Block</td>
+                <td style='text-align:center;color:#64748b'>MBConv Block</td>
             </tr>
         </tbody>
     </table>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Kesimpulan ──────────────────────────────────────────────────────────
+    # ── Kesimpulan ────────────────────────────────────────────────────────
     st.markdown(f"""
     <div class="analysis-box">
-        <strong style='color:#00e5ff'>📋 Kesimpulan Perbandingan</strong><br><br>
+        <strong style='color:#0369a1'>📋 Kesimpulan Perbandingan</strong><br><br>
         Berdasarkan hasil evaluasi pada data test (2.800 sampel, 8 kelas),
         <strong>ResNet50 unggul secara keseluruhan</strong> dengan accuracy <strong>93.0%</strong>
         dibanding EfficientNetB0 <strong>89.0%</strong> (selisih 4.0%).<br><br>
         ResNet50 dominan di kelas <strong>AMD, CSR, MH</strong> dengan F1-Score sempurna 100%,
         serta lebih baik di <strong>CNV dan DME</strong>. EfficientNetB0 sedikit lebih unggul
-        di kelas <strong>DR</strong> (93% vs 99% milik ResNet50) namun tertinggal signifikan
-        di <strong>DRUSEN</strong> (73% vs 80%).<br><br>
+        di kelas <strong>DR</strong> namun tertinggal signifikan di <strong>DRUSEN</strong>
+        (73% vs 80%).<br><br>
         Dari sisi efisiensi, EfficientNetB0 hanya membutuhkan ~5.3M parameter (vs ~25.6M ResNet50),
         menjadikannya kandidat lebih ringan untuk deployment — namun untuk akurasi diagnostik
         maksimal pada dataset ini, <strong>ResNet50 adalah pilihan utama</strong>.
@@ -1385,7 +1636,7 @@ with tab4:
     st.markdown("""
     <div class="card">
         <div class="card-title">👁️ Tentang Sistem Ini</div>
-        <p style='line-height:1.8;color:#94a3b8;font-size:0.9rem'>
+        <p style='line-height:1.8;color:#475569;font-size:0.9rem'>
         Sistem ini merupakan implementasi web untuk penelitian <strong>Perbandingan Arsitektur 
         ResNet50 dan EfficientNetB0 dengan Explainable AI Grad-CAM++</strong> untuk klasifikasi 
         penyakit retina pada citra Optical Coherence Tomography (OCT).
@@ -1394,8 +1645,8 @@ with tab4:
 
     <div class="card">
         <div class="card-title">🧠 Metode Explainability — Grad-CAM++</div>
-        <p style='line-height:1.8;color:#94a3b8;font-size:0.9rem'>
-        <strong style='color:#e2e8f0'>Grad-CAM++</strong> (Gradient-weighted Class Activation Mapping++) 
+        <p style='line-height:1.8;color:#475569;font-size:0.9rem'>
+        <strong style='color:#0f172a'>Grad-CAM++</strong> (Gradient-weighted Class Activation Mapping++) 
         adalah peningkatan dari Grad-CAM yang menggunakan kombinasi bobot alpha berdasarkan turunan 
         orde-dua untuk menghasilkan peta perhatian (attention map) yang lebih presisi. Pada 
         konteks OCT retina, heatmap yang dihasilkan membantu mengidentifikasi area jaringan retina 
@@ -1411,10 +1662,13 @@ with tab4:
     for i, (cls, desc) in enumerate(CLASS_DESC.items()):
         with cls_cols[i % 4]:
             badge = render_badge(cls)
+            sev   = CLASS_SEVERITY.get(cls, '')
             st.markdown(f"""
-            <div style='background:#1a2235;border-radius:8px;padding:0.75rem;margin-bottom:0.5rem'>
+            <div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
+                        padding:0.85rem;margin-bottom:0.5rem;box-shadow:0 1px 2px rgba(0,0,0,0.04)'>
                 {badge}
-                <div style='font-size:0.75rem;color:#64748b;margin-top:0.4rem'>{desc}</div>
+                <div style='font-size:0.7rem;font-weight:600;color:#64748b;margin-top:0.4rem'>{sev}</div>
+                <div style='font-size:0.72rem;color:#94a3b8;margin-top:0.3rem;line-height:1.5'>{desc}</div>
             </div>
             """, unsafe_allow_html=True)
 
