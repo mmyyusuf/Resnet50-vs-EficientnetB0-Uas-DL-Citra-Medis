@@ -4,30 +4,68 @@ dengan Explainable AI Grad-CAM++ untuk Klasifikasi Penyakit Retina (OCT)
 """
 
 import os
-os.environ["TF_USE_LEGACY_KERAS"] = "1"  # Paksa Keras 2 behavior agar model .h5 lama bisa diload
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
 
 import streamlit as st
 import numpy as np
 import tensorflow as tf
-
-# Gunakan tf_keras (Keras 2) untuk load model agar kompatibel dengan model yang disave di TF 2.13
-try:
-    import tf_keras
-    from tf_keras.models import load_model
-    from tf_keras.applications.resnet50 import preprocess_input as resnet_preprocess
-    from tf_keras.applications.efficientnet import preprocess_input as effnet_preprocess
-except ImportError:
-    from tensorflow.keras.models import load_model
-    from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
-    from tensorflow.keras.applications.efficientnet import preprocess_input as effnet_preprocess
+from tensorflow.keras.layers import InputLayer
+from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
+from tensorflow.keras.applications.efficientnet import preprocess_input as effnet_preprocess
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from PIL import Image
 import gdown
-import os
 import io
 import requests
+from pathlib import Path
+
+# ── Patch InputLayer agar kompatibel dengan model Keras 2 (.h5) ──────────────
+class CompatInputLayer(InputLayer):
+    def __init__(self, *args, **kwargs):
+        kwargs.pop('batch_shape', None)
+        kwargs.pop('optional', None)
+        # Ambil batch_input_shape dari batch_shape jika ada
+        batch_shape = kwargs.pop('batch_shape', None)
+        if batch_shape is not None and 'batch_input_shape' not in kwargs:
+            kwargs['batch_input_shape'] = batch_shape
+        super().__init__(*args, **kwargs)
+
+def load_model_compat(path):
+    """Load model .h5 Keras 2 di environment Keras 3."""
+    import tensorflow as tf
+    import json, h5py
+
+    with h5py.File(path, 'r') as f:
+        model_config = f.attrs.get('model_config')
+        if model_config is not None:
+            if isinstance(model_config, bytes):
+                model_config = model_config.decode('utf-8')
+            config = json.loads(model_config)
+
+            def fix_config(cfg):
+                if isinstance(cfg, dict):
+                    if cfg.get('class_name') == 'InputLayer':
+                        c = cfg.get('config', {})
+                        bs = c.pop('batch_shape', None)
+                        c.pop('optional', None)
+                        if bs is not None:
+                            c['batch_input_shape'] = bs
+                    for v in cfg.values():
+                        fix_config(v)
+                elif isinstance(cfg, list):
+                    for item in cfg:
+                        fix_config(item)
+
+            fix_config(config)
+            model_config_str = json.dumps(config)
+
+    model = tf.keras.models.model_from_json(model_config_str)
+
+    # Load weights
+    model.load_weights(path)
+    return model
 from pathlib import Path
 
 st.set_page_config(
@@ -483,7 +521,7 @@ def load_model_from_drive(url, filename):
     if not path.exists():
         with st.spinner(f"⬇️ Mengunduh {filename}..."):
             gdown.download(url, str(path), quiet=False, fuzzy=True)
-    return load_model(str(path), compile=False)
+    return load_model_compat(str(path))
 
 def preprocess_resnet(img):
     img = img.convert("RGB").resize(IMG_SIZE)
