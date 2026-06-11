@@ -1113,7 +1113,6 @@ with tab1:
                 with c1: st.image(orig_arr, caption="Citra Asli",  use_container_width=True, clamp=True)
                 with c2: st.image(hm_color, caption="Heatmap",     use_container_width=True, clamp=True)
                 with c3: st.image(overlay,  caption="Overlay",     use_container_width=True, clamp=True)
-                st.caption(f"Fokus perhatian model: **{pred_label}** ({conf:.1f}%)")
             except Exception as e:
                 st.error(f"Gagal: {e}")
     else:
