@@ -55,12 +55,24 @@ def load_model_compat(path: str):
 
     def fix_cfg(node):
         if isinstance(node, dict):
+            # Fix InputLayer
             if node.get('class_name') == 'InputLayer':
                 c = node.get('config', {})
                 bs = c.pop('batch_shape', None)
                 c.pop('optional', None)
                 if bs is not None and 'batch_input_shape' not in c:
                     c['batch_input_shape'] = bs
+
+            # Fix dtype: Keras 3 menyimpan sebagai dict DTypePolicy,
+            # Keras 2 hanya string — konversi balik ke string
+            cfg = node.get('config', {})
+            if isinstance(cfg, dict):
+                dtype_val = cfg.get('dtype')
+                if isinstance(dtype_val, dict):
+                    # Ambil nama dtype dari nested config
+                    dtype_name = (dtype_val.get('config', {}) or {}).get('name', 'float32')
+                    cfg['dtype'] = dtype_name
+
             for v in node.values():
                 fix_cfg(v)
         elif isinstance(node, list):
