@@ -40,71 +40,75 @@ except Exception:
 # ── Load model .h5 Keras 2 di environment Keras 3 ────────────────────────────
 def load_model_compat(path: str):
     """
-    Patch config JSON dari file .h5 sebelum diload:
-    - Hapus key 'batch_shape' dan 'optional' dari InputLayer
-      (tidak dikenal di Keras 3)
-    - Konversi 'batch_shape' → 'batch_input_shape'
+    Load model .h5 yang disave dengan Keras 2 / TF 2.13
+    di environment Keras 3 / TF 2.15, menggunakan custom_objects
+    untuk override layer yang berubah format config-nya.
     """
-    with h5py.File(path, 'r') as f:
-        raw = f.attrs.get('model_config')
-        if raw is None:
-            raise ValueError("model_config tidak ditemukan di file .h5")
-        if isinstance(raw, bytes):
-            raw = raw.decode('utf-8')
-        config = json.loads(raw)
+    import tensorflow as tf
+    import keras
 
-    def fix_cfg(node):
-        if isinstance(node, dict):
-            # Fix InputLayer
-            if node.get('class_name') == 'InputLayer':
-                c = node.get('config', {})
-                bs = c.pop('batch_shape', None)
-                c.pop('optional', None)
-                if bs is not None and 'batch_input_shape' not in c:
-                    c['batch_input_shape'] = bs
+    # Override layer-layer yang config-nya berubah di Keras 3
+    class _InputLayer(keras.layers.InputLayer):
+        def __init__(self, *args, **kwargs):
+            kwargs.pop('optional', None)
+            bs = kwargs.pop('batch_shape', None)
+            if bs is not None and 'batch_input_shape' not in kwargs:
+                kwargs['batch_input_shape'] = bs
+            super().__init__(*args, **kwargs)
 
-            cfg = node.get('config', {})
-            if isinstance(cfg, dict):
-                # Fix dtype dict → string
-                dtype_val = cfg.get('dtype')
-                if isinstance(dtype_val, dict):
-                    dtype_name = (dtype_val.get('config', {}) or {}).get('name', 'float32')
-                    cfg['dtype'] = dtype_name
+    class _ZeroPadding2D(keras.layers.ZeroPadding2D):
+        def __init__(self, *args, **kwargs):
+            d = kwargs.get('dtype')
+            if isinstance(d, dict):
+                kwargs['dtype'] = d.get('config', {}).get('name', 'float32')
+            super().__init__(*args, **kwargs)
 
-                # Hapus quantization_config (Keras 3 only)
-                cfg.pop('quantization_config', None)
+    class _Dense(keras.layers.Dense):
+        def __init__(self, *args, **kwargs):
+            kwargs.pop('quantization_config', None)
+            d = kwargs.get('dtype')
+            if isinstance(d, dict):
+                kwargs['dtype'] = d.get('config', {}).get('name', 'float32')
+            for k in ['kernel_initializer','bias_initializer']:
+                v = kwargs.get(k)
+                if isinstance(v, dict) and 'module' in v:
+                    kwargs[k] = {'class_name': v['class_name'], 'config': v.get('config', {})}
+            super().__init__(*args, **kwargs)
 
-                # Fix initializer: Keras 3 pakai format {'module':..., 'class_name':..., 'config':...}
-                # Keras 2 pakai format {'class_name':..., 'config':...}
-                for key in ['kernel_initializer', 'bias_initializer',
-                            'recurrent_initializer', 'embeddings_initializer']:
-                    init = cfg.get(key)
-                    if isinstance(init, dict) and 'module' in init:
-                        cfg[key] = {
-                            'class_name': init.get('class_name', 'GlorotUniform'),
-                            'config': init.get('config', {})
-                        }
+    # Buat generic patcher untuk semua layer lain
+    def _make_patched(base_cls):
+        class _Patched(base_cls):
+            def __init__(self, *args, **kwargs):
+                kwargs.pop('quantization_config', None)
+                d = kwargs.get('dtype')
+                if isinstance(d, dict):
+                    kwargs['dtype'] = d.get('config', {}).get('name', 'float32')
+                for k in list(kwargs.keys()):
+                    v = kwargs[k]
+                    if isinstance(v, dict) and 'module' in v and 'class_name' in v:
+                        kwargs[k] = {'class_name': v['class_name'], 'config': v.get('config', {})}
+                super().__init__(*args, **kwargs)
+        _Patched.__name__ = base_cls.__name__
+        return _Patched
 
-                # Fix regularizer & constraint format yang sama
-                for key in ['kernel_regularizer', 'bias_regularizer', 'activity_regularizer',
-                            'kernel_constraint', 'bias_constraint']:
-                    val = cfg.get(key)
-                    if isinstance(val, dict) and 'module' in val:
-                        cfg[key] = {
-                            'class_name': val.get('class_name'),
-                            'config': val.get('config', {})
-                        }
+    layer_classes = [
+        keras.layers.Conv2D, keras.layers.BatchNormalization,
+        keras.layers.Activation, keras.layers.MaxPooling2D,
+        keras.layers.GlobalAveragePooling2D, keras.layers.Dropout,
+        keras.layers.Add, keras.layers.Concatenate,
+        keras.layers.DepthwiseConv2D, keras.layers.Rescaling,
+        keras.layers.RandomFlip, keras.layers.RandomRotation,
+    ]
 
-            for v in node.values():
-                fix_cfg(v)
-        elif isinstance(node, list):
-            for item in node:
-                fix_cfg(item)
+    custom_objects = {
+        'InputLayer':            _InputLayer,
+        'ZeroPadding2D':         _ZeroPadding2D,
+        'Dense':                 _Dense,
+    }
+    for cls in layer_classes:
+        custom_objects[cls.__name__] = _make_patched(cls)
 
-    fix_cfg(config)
-    model = model_from_json(json.dumps(config))
-    model.load_weights(path)
-    return model
+    return keras.models.load_model(path, custom_objects=custom_objects, compile=False)
 
 
 st.set_page_config(
