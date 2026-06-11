@@ -1094,7 +1094,7 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
 
-st.markdown("---")
+        st.markdown("---")
         st.markdown('<div class="card-title">🧠 Explainable AI — Grad-CAM++</div>',
                     unsafe_allow_html=True)
 
