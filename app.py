@@ -1094,33 +1094,28 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
 
-        st.markdown("---")
-        st.markdown('<div class="card-title">🗺️ Grad-CAM++ — Perbandingan Visual Kedua Model</div>',
+st.markdown("---")
+        st.markdown('<div class="card-title">🧠 Explainable AI — Grad-CAM++</div>',
                     unsafe_allow_html=True)
 
-        if st.button("🔍 Generate Grad-CAM++ Kedua Model"):
-            orig_arr  = np.array(pil_img.resize(IMG_SIZE), dtype=np.float32) / 255.0
-            gcam_cols = st.columns(n_models)
-            for ci, (mname, model) in enumerate(model_list):
-                pred_idx, conf, probs, pred_label, img_arr = results[mname]
-                color = '#0369a1' if ci == 0 else '#7c3aed'
-                with gcam_cols[ci]:
-                    st.markdown(f"<div style='font-size:0.82rem;font-weight:700;"
-                                f"color:{color};margin-bottom:0.5rem'>📌 {mname}</div>",
-                                unsafe_allow_html=True)
-                    try:
-                        with st.spinner(f"Menghitung Grad-CAM++ {mname}..."):
-                            layer_name = get_last_conv_layer(model, mname)
-                            heatmap    = grad_cam_plusplus(model, img_arr, pred_idx, layer_name)
-                            overlay    = overlay_heatmap(orig_arr, heatmap)
-                            hm_color   = cm.jet(heatmap)[:, :, :3]
-
-                        st.image(orig_arr,  caption="Citra Asli",       use_container_width=True, clamp=True)
-                        st.image(hm_color,  caption="Heatmap",          use_container_width=True, clamp=True)
-                        st.image(overlay,   caption="Overlay",          use_container_width=True, clamp=True)
-                        st.caption(f"Layer: `{layer_name}` · Fokus: **{pred_label}** ({conf:.1f}%)")
-                    except Exception as e:
-                        st.error(f"Gagal: {e}")
+        if st.button("🔍 Generate Explainable AI Grad-CAM++"):
+            orig_arr = np.array(pil_img.resize(IMG_SIZE), dtype=np.float32) / 255.0
+            mname = 'EfficientNetB0' if 'EfficientNetB0' in models else list(models.keys())[0]
+            model = models[mname]
+            pred_idx, conf, probs, pred_label, img_arr = results[mname]
+            try:
+                with st.spinner("Menghitung Grad-CAM++..."):
+                    layer_name = get_last_conv_layer(model, mname)
+                    heatmap    = grad_cam_plusplus(model, img_arr, pred_idx, layer_name)
+                    overlay    = overlay_heatmap(orig_arr, heatmap)
+                    hm_color   = cm.jet(heatmap)[:, :, :3]
+                c1, c2, c3 = st.columns(3)
+                with c1: st.image(orig_arr, caption="Citra Asli",  use_container_width=True, clamp=True)
+                with c2: st.image(hm_color, caption="Heatmap",     use_container_width=True, clamp=True)
+                with c3: st.image(overlay,  caption="Overlay",     use_container_width=True, clamp=True)
+                st.caption(f"Fokus perhatian model: **{pred_label}** ({conf:.1f}%)")
+            except Exception as e:
+                st.error(f"Gagal: {e}")
     else:
         st.markdown("""
         <div style='text-align:center;padding:4rem;color:#94a3b8;
