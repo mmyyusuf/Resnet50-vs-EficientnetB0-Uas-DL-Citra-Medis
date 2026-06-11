@@ -4,69 +4,74 @@ dengan Explainable AI Grad-CAM++ untuk Klasifikasi Penyakit Retina (OCT)
 """
 
 import os
-os.environ["TF_USE_LEGACY_KERAS"] = "1"
+import io
+import json
+import requests
+from pathlib import Path
 
 import streamlit as st
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.layers import InputLayer
-from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
-from tensorflow.keras.applications.efficientnet import preprocess_input as effnet_preprocess
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from PIL import Image
 import gdown
-import io
-import requests
-from pathlib import Path
+import h5py
 
-# ── Patch InputLayer agar kompatibel dengan model Keras 2 (.h5) ──────────────
-class CompatInputLayer(InputLayer):
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('batch_shape', None)
-        kwargs.pop('optional', None)
-        # Ambil batch_input_shape dari batch_shape jika ada
-        batch_shape = kwargs.pop('batch_shape', None)
-        if batch_shape is not None and 'batch_input_shape' not in kwargs:
-            kwargs['batch_input_shape'] = batch_shape
-        super().__init__(*args, **kwargs)
+# ── TensorFlow / Keras imports ────────────────────────────────────────────────
+import tensorflow as tf
 
-def load_model_compat(path):
-    """Load model .h5 Keras 2 di environment Keras 3."""
-    import tensorflow as tf
-    import json, h5py
+# TF 2.15+ memisahkan keras jadi package sendiri; gunakan keras langsung
+try:
+    import keras
+    from keras.models import model_from_json
+    from keras.applications.resnet50 import preprocess_input as resnet_preprocess
+    from keras.applications.efficientnet import preprocess_input as effnet_preprocess
+    from keras import layers as keras_layers
+except Exception:
+    # Fallback ke tensorflow.keras jika keras standalone belum tersedia
+    from tensorflow import keras
+    from tensorflow.keras.models import model_from_json
+    from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
+    from tensorflow.keras.applications.efficientnet import preprocess_input as effnet_preprocess
+    keras_layers = tf.keras.layers
 
+
+# ── Load model .h5 Keras 2 di environment Keras 3 ────────────────────────────
+def load_model_compat(path: str):
+    """
+    Patch config JSON dari file .h5 sebelum diload:
+    - Hapus key 'batch_shape' dan 'optional' dari InputLayer
+      (tidak dikenal di Keras 3)
+    - Konversi 'batch_shape' → 'batch_input_shape'
+    """
     with h5py.File(path, 'r') as f:
-        model_config = f.attrs.get('model_config')
-        if model_config is not None:
-            if isinstance(model_config, bytes):
-                model_config = model_config.decode('utf-8')
-            config = json.loads(model_config)
+        raw = f.attrs.get('model_config')
+        if raw is None:
+            raise ValueError("model_config tidak ditemukan di file .h5")
+        if isinstance(raw, bytes):
+            raw = raw.decode('utf-8')
+        config = json.loads(raw)
 
-            def fix_config(cfg):
-                if isinstance(cfg, dict):
-                    if cfg.get('class_name') == 'InputLayer':
-                        c = cfg.get('config', {})
-                        bs = c.pop('batch_shape', None)
-                        c.pop('optional', None)
-                        if bs is not None:
-                            c['batch_input_shape'] = bs
-                    for v in cfg.values():
-                        fix_config(v)
-                elif isinstance(cfg, list):
-                    for item in cfg:
-                        fix_config(item)
+    def fix_cfg(node):
+        if isinstance(node, dict):
+            if node.get('class_name') == 'InputLayer':
+                c = node.get('config', {})
+                bs = c.pop('batch_shape', None)
+                c.pop('optional', None)
+                if bs is not None and 'batch_input_shape' not in c:
+                    c['batch_input_shape'] = bs
+            for v in node.values():
+                fix_cfg(v)
+        elif isinstance(node, list):
+            for item in node:
+                fix_cfg(item)
 
-            fix_config(config)
-            model_config_str = json.dumps(config)
-
-    model = tf.keras.models.model_from_json(model_config_str)
-
-    # Load weights
+    fix_cfg(config)
+    model = model_from_json(json.dumps(config))
     model.load_weights(path)
     return model
-from pathlib import Path
+
 
 st.set_page_config(
     page_title="RetinaScan AI | OCT Classification",
