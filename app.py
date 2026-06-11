@@ -3,12 +3,23 @@ Aplikasi Streamlit: Perbandingan ResNet50 vs EfficientNetB0
 dengan Explainable AI Grad-CAM++ untuk Klasifikasi Penyakit Retina (OCT)
 """
 
+import os
+os.environ["TF_USE_LEGACY_KERAS"] = "1"  # Paksa Keras 2 behavior agar model .h5 lama bisa diload
+
 import streamlit as st
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.models import load_model
-from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
-from tensorflow.keras.applications.efficientnet import preprocess_input as effnet_preprocess
+
+# Gunakan tf_keras (Keras 2) untuk load model agar kompatibel dengan model yang disave di TF 2.13
+try:
+    import tf_keras
+    from tf_keras.models import load_model
+    from tf_keras.applications.resnet50 import preprocess_input as resnet_preprocess
+    from tf_keras.applications.efficientnet import preprocess_input as effnet_preprocess
+except ImportError:
+    from tensorflow.keras.models import load_model
+    from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
+    from tensorflow.keras.applications.efficientnet import preprocess_input as effnet_preprocess
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
