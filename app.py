@@ -63,15 +63,37 @@ def load_model_compat(path: str):
                 if bs is not None and 'batch_input_shape' not in c:
                     c['batch_input_shape'] = bs
 
-            # Fix dtype: Keras 3 menyimpan sebagai dict DTypePolicy,
-            # Keras 2 hanya string — konversi balik ke string
             cfg = node.get('config', {})
             if isinstance(cfg, dict):
+                # Fix dtype dict → string
                 dtype_val = cfg.get('dtype')
                 if isinstance(dtype_val, dict):
-                    # Ambil nama dtype dari nested config
                     dtype_name = (dtype_val.get('config', {}) or {}).get('name', 'float32')
                     cfg['dtype'] = dtype_name
+
+                # Hapus quantization_config (Keras 3 only)
+                cfg.pop('quantization_config', None)
+
+                # Fix initializer: Keras 3 pakai format {'module':..., 'class_name':..., 'config':...}
+                # Keras 2 pakai format {'class_name':..., 'config':...}
+                for key in ['kernel_initializer', 'bias_initializer',
+                            'recurrent_initializer', 'embeddings_initializer']:
+                    init = cfg.get(key)
+                    if isinstance(init, dict) and 'module' in init:
+                        cfg[key] = {
+                            'class_name': init.get('class_name', 'GlorotUniform'),
+                            'config': init.get('config', {})
+                        }
+
+                # Fix regularizer & constraint format yang sama
+                for key in ['kernel_regularizer', 'bias_regularizer', 'activity_regularizer',
+                            'kernel_constraint', 'bias_constraint']:
+                    val = cfg.get(key)
+                    if isinstance(val, dict) and 'module' in val:
+                        cfg[key] = {
+                            'class_name': val.get('class_name'),
+                            'config': val.get('config', {})
+                        }
 
             for v in node.values():
                 fix_cfg(v)
