@@ -193,13 +193,7 @@ streamlit run app.py
 3. Chattopadhay, A., et al. (2018). *Grad-CAM++: Generalized Gradient-Based Visual Explanations for Deep Convolutional Networks.* WACV.
 4. Kermany, D. S., et al. (2018). *Identifying Medical Diagnoses and Treatable Diseases by Image-Based Deep Learning.* Cell.
 
----
 
-## 👤 Author
-
-**[Nama Kamu]**  
-[Universitas / Institusi]  
-[Email] · [LinkedIn] · [GitHub]
 
 ---
 
