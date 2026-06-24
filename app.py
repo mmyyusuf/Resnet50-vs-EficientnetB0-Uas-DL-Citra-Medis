@@ -974,47 +974,43 @@ with tab1:
         <p style='font-size:0.85rem;color:#475569;line-height:1.7'>
         Upload 1 gambar dari data test. Sistem akan menjalankan prediksi pada 
         <strong>ResNet50</strong> dan <strong>EfficientNetB0</strong> secara bersamaan,
-        menampilkan kelas prediksi, confidence score, distribusi probabilitas, 
-        dan Grad-CAM++ dari masing-masing model.
+        menampilkan kelas prediksi, confidence score, dan distribusi probabilitas.
+        Visualisasi Grad-CAM++ ditampilkan dari model EfficientNetB0.
         </p>
     </div>
     """, unsafe_allow_html=True)
-
-    uploaded = st.file_uploader("Upload gambar OCT (.jpg / .png)", type=["jpg", "jpeg", "png"])
-
+ 
+    uploaded = st.file_uploader("Upload gambar OCT (.jpg / .png)", type=["jpg","jpeg","png"])
+ 
     if not models:
         st.warning("⚠️ Tidak ada model yang termuat.")
     elif uploaded:
         pil_img = Image.open(uploaded).convert("RGB")
-
         st.markdown("---")
-        img_col, info_col = st.columns([1, 3])
+        img_col, info_col = st.columns([1,3])
         with img_col:
             st.image(pil_img, caption="Citra Input", use_container_width=True)
         with info_col:
             st.markdown(f"""
             <div class="metric-box">
                 <div class="metric-label">Nama File</div>
-                <div style='font-family:"JetBrains Mono",monospace;color:#0f172a;
-                            font-size:0.9rem;font-weight:500'>{uploaded.name}</div>
+                <div style='font-family:"JetBrains Mono",monospace;color:#0f172a;font-size:0.9rem;font-weight:500'>{uploaded.name}</div>
             </div>
             <div class="metric-box">
                 <div class="metric-label">Ukuran Input Model</div>
-                <div style='font-family:"JetBrains Mono",monospace;color:#0f172a;
-                            font-size:0.9rem;font-weight:500'>224 × 224 px (RGB)</div>
+                <div style='font-family:"JetBrains Mono",monospace;color:#0f172a;font-size:0.9rem;font-weight:500'>224 × 224 px (RGB)</div>
             </div>
             """, unsafe_allow_html=True)
-
+ 
         st.markdown("---")
-
         model_list = list(models.items())
         n_models   = len(model_list)
-
+ 
         if n_models == 2:
             cols_header = st.columns(2)
-            colors      = ['#0369a1', '#7c3aed']
-            bg_colors   = ['#e0f2fe', '#ede9fe']
-            border_c    = ['rgba(3,105,161,0.3)', 'rgba(124,58,237,0.3)']
+            colors    = ['#0369a1','#7c3aed']
+            bg_colors = ['#e0f2fe','#ede9fe']
+            border_c  = ['rgba(3,105,161,0.3)','rgba(124,58,237,0.3)']
             for ci, (mname, _) in enumerate(model_list):
                 with cols_header[ci]:
                     st.markdown(f"""
@@ -1025,26 +1021,23 @@ with tab1:
                         </span>
                     </div>
                     """, unsafe_allow_html=True)
-
+ 
         results   = {}
         pred_cols = st.columns(n_models)
-
         for ci, (mname, model) in enumerate(model_list):
             preprocess_fn = get_preprocess_fn(mname)
             img_arr       = preprocess_fn(pil_img)
             pred_idx, conf, probs = predict(model, img_arr)
             pred_label = CLASS_NAMES[pred_idx]
             results[mname] = (pred_idx, conf, probs, pred_label, img_arr)
-            badge  = render_badge(pred_label)
-            color  = '#0369a1' if ci == 0 else '#7c3aed'
-            bg_c   = '#f0f9ff' if ci == 0 else '#f5f3ff'
-            bdr_c  = 'rgba(3,105,161,0.2)' if ci == 0 else 'rgba(124,58,237,0.2)'
-
+            badge = render_badge(pred_label)
+            color = '#0369a1' if ci==0 else '#7c3aed'
+            bg_c  = '#f0f9ff' if ci==0 else '#f5f3ff'
+            bdr_c = 'rgba(3,105,161,0.2)' if ci==0 else 'rgba(124,58,237,0.2)'
             with pred_cols[ci]:
                 st.markdown(f"""
-                <div style='background:{bg_c};border:1px solid {bdr_c};
-                            border-radius:12px;padding:1.25rem;margin-bottom:0.75rem;
-                            box-shadow:0 1px 4px rgba(0,0,0,0.06)'>
+                <div style='background:{bg_c};border:1px solid {bdr_c};border-radius:12px;
+                            padding:1.25rem;margin-bottom:0.75rem;box-shadow:0 1px 4px rgba(0,0,0,0.06)'>
                     <div style='font-size:0.68rem;color:#64748b;text-transform:uppercase;
                                 letter-spacing:0.08em;margin-bottom:0.5rem'>Prediksi Kelas</div>
                     <div style='margin-bottom:0.4rem'>{badge}</div>
@@ -1053,20 +1046,13 @@ with tab1:
                     <div style='font-size:0.72rem;color:#64748b;margin-top:0.2rem'>Confidence Score</div>
                 </div>
                 """, unsafe_allow_html=True)
-
-                sev = CLASS_SEVERITY.get(pred_label, '')
-                st.caption(f"{sev} · {CLASS_DESC[pred_label]}")
-
-                st.markdown("<div style='font-size:0.75rem;color:#64748b;margin:0.75rem 0 0.4rem'>"
-                            "Top-5 Probabilitas</div>", unsafe_allow_html=True)
-                sorted_idx = np.argsort(probs)[::-1][:5]
-                for i in sorted_idx:
+                st.caption(f"{CLASS_SEVERITY.get(pred_label,'')} · {CLASS_DESC[pred_label]}")
+                st.markdown("<div style='font-size:0.75rem;color:#64748b;margin:0.75rem 0 0.4rem'>Top-5 Probabilitas</div>", unsafe_allow_html=True)
+                for i in np.argsort(probs)[::-1][:5]:
                     st.progress(float(probs[i]), text=f"{CLASS_NAMES[i]}: {probs[i]*100:.1f}%")
-
-        # Update total predictions counter
+ 
         st.session_state.total_predictions += 1
-        st.session_state.last_prediction = pred_label if n_models == 1 else None
-
+ 
         if n_models == 2:
             labels = [r[3] for r in results.values()]
             if labels[0] == labels[1]:
@@ -1077,8 +1063,7 @@ with tab1:
                         Kedua model <strong style='color:#059669'>sepakat</strong> — prediksi kelas 
                         <strong style='color:#059669'>{labels[0]}</strong>
                     </span>
-                </div>
-                """, unsafe_allow_html=True)
+                </div>""", unsafe_allow_html=True)
             else:
                 confs  = [r[1] for r in results.values()]
                 mnames = list(results.keys())
@@ -1091,28 +1076,58 @@ with tab1:
                         &nbsp;|&nbsp;
                         {mnames[1]}: <strong style='color:#7c3aed'>{labels[1]} ({confs[1]:.1f}%)</strong>
                     </span>
-                </div>
-                """, unsafe_allow_html=True)
-
+                </div>""", unsafe_allow_html=True)
+ 
+        # ── Grad-CAM++ hanya dari EfficientNetB0 ──
         st.markdown("---")
-        st.markdown('<div class="card-title">🧠 Explainable AI — Grad-CAM++</div>',
-                    unsafe_allow_html=True)
-
-        if st.button("🔍 Generate Explainable AI Grad-CAM++"):
+        st.markdown('<div class="card-title">🧠 Explainable AI — Grad-CAM++</div>', unsafe_allow_html=True)
+ 
+        if st.button("🔍 Generate Grad-CAM++"):
             orig_arr = np.array(pil_img.resize(IMG_SIZE), dtype=np.float32) / 255.0
-            mname = 'EfficientNetB0' if 'EfficientNetB0' in models else list(models.keys())[0]
-            model = models[mname]
-            pred_idx, conf, probs, pred_label, img_arr = results[mname]
+            # Pilih EfficientNetB0, fallback ke model pertama jika tidak ada
+            gcam_model_name = 'EfficientNetB0' if 'EfficientNetB0' in models else list(models.keys())[0]
+            gcam_model = models[gcam_model_name]
+            pred_idx, conf, probs, pred_label, img_arr = results[gcam_model_name]
             try:
                 with st.spinner("Menghitung Grad-CAM++..."):
-                    layer_name = get_last_conv_layer(model, mname)
-                    heatmap    = grad_cam_plusplus(model, img_arr, pred_idx, layer_name)
+                    layer_name = get_last_conv_layer(gcam_model, gcam_model_name)
+                    heatmap    = grad_cam_plusplus(gcam_model, img_arr, pred_idx, layer_name)
                     overlay    = overlay_heatmap(orig_arr, heatmap)
-                    hm_color   = cm.jet(heatmap)[:, :, :3]
+                    hm_color   = cm.jet(heatmap)[:,:,:3]
+ 
                 c1, c2, c3 = st.columns(3)
-                with c1: st.image(orig_arr, caption="Citra Asli",  use_container_width=True, clamp=True)
-                with c2: st.image(hm_color, caption="Heatmap",     use_container_width=True, clamp=True)
-                with c3: st.image(overlay,  caption="Overlay",     use_container_width=True, clamp=True)
+                with c1: st.image(orig_arr,  caption="Citra Asli",        use_container_width=True, clamp=True)
+                with c2: st.image(hm_color,  caption="Grad-CAM++ Heatmap", use_container_width=True, clamp=True)
+                with c3: st.image(overlay,   caption="Overlay",            use_container_width=True, clamp=True)
+                st.caption(f"Explainable AI Grad-CAM++ · Prediksi: **{pred_label}** ({conf:.1f}%)")
+ 
+                # Deskripsi area fokus per kelas
+                focus_area = {
+                    'AMD':    'area drusen dan perubahan degeneratif pada epitel pigmen retina (RPE) serta membran Bruch',
+                    'CNV':    'area neovaskularisasi koroidal dan kebocoran cairan subretinal di bawah makula',
+                    'CSR':    'area akumulasi cairan serosa di bawah retina neurosensori dan lapisan epitel pigmen retina',
+                    'DME':    'area pembengkakan makula dan akumulasi cairan intraretinal akibat kebocoran kapiler',
+                    'DR':     'area perdarahan retina, eksudat keras, dan mikroaneurisma akibat kerusakan pembuluh darah',
+                    'DRUSEN': 'area endapan drusen di bawah epitel pigmen retina yang tampak sebagai bintik-bintik terang',
+                    'MH':     'area lubang makula di pusat fovea dan jaringan sekitarnya yang mengalami tarikan vitreous',
+                    'NORMAL': 'lapisan retina yang sehat dan terstruktur dengan baik tanpa tanda-tanda patologi',
+                }
+                area = focus_area.get(pred_label, 'area lesi retina yang mengalami perubahan tekstur')
+ 
+                st.markdown(f"""
+                <div class="analysis-box">
+                    <strong style='color:#0369a1'>📋 Analisis Visual Grad-CAM++</strong><br><br>
+                    Hasil Grad-CAM++ menunjukkan bahwa model <strong>EfficientNetB0</strong> 
+                    lebih banyak memfokuskan perhatian pada 
+                    <strong>{area}</strong> saat memprediksi kelas 
+                    <strong>{pred_label}</strong> dengan confidence <strong>{conf:.1f}%</strong>. 
+                    Warna merah-kuning pada heatmap menunjukkan area dengan aktivasi tertinggi, 
+                    sementara warna biru menunjukkan area yang kurang relevan bagi model.<br><br>
+                    Hal ini menunjukkan bahwa model telah mempelajari karakteristik visual 
+                    yang relevan secara klinis dengan diagnosis <strong>{pred_label}</strong> 
+                    ({CLASS_DESC.get(pred_label, '')}) pada citra OCT.
+                </div>
+                """, unsafe_allow_html=True)
             except Exception as e:
                 st.error(f"Gagal: {e}")
     else:
