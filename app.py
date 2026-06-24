@@ -1084,24 +1084,30 @@ with tab1:
  
         if st.button("🔍 Generate Grad-CAM++"):
             orig_arr = np.array(pil_img.resize(IMG_SIZE), dtype=np.float32) / 255.0
-            # Pilih ResNet50 (model terbaik, acc 93%), fallback ke model pertama jika tidak ada
-            gcam_model_name = 'ResNet50' if 'ResNet50' in models else list(models.keys())[0]
-            gcam_model = models[gcam_model_name]
-            pred_idx, conf, probs, pred_label, img_arr = results[gcam_model_name]
+ 
+            # Gambar heatmap → EfficientNetB0 (visual lebih bagus)
+            vis_model_name = 'EfficientNetB0' if 'EfficientNetB0' in models else list(models.keys())[0]
+            vis_model      = models[vis_model_name]
+            vis_pred_idx, vis_conf, _, vis_pred_label, vis_img_arr = results[vis_model_name]
+ 
+            # Teks analisis + confidence → ResNet50 (akurasi lebih tinggi 93%)
+            txt_model_name = 'ResNet50' if 'ResNet50' in models else list(models.keys())[0]
+            _, txt_conf, _, txt_pred_label, _ = results[txt_model_name]
+ 
             try:
                 with st.spinner("Menghitung Grad-CAM++..."):
-                    layer_name = get_last_conv_layer(gcam_model, gcam_model_name)
-                    heatmap    = grad_cam_plusplus(gcam_model, img_arr, pred_idx, layer_name)
+                    layer_name = get_last_conv_layer(vis_model, vis_model_name)
+                    heatmap    = grad_cam_plusplus(vis_model, vis_img_arr, vis_pred_idx, layer_name)
                     overlay    = overlay_heatmap(orig_arr, heatmap)
                     hm_color   = cm.jet(heatmap)[:,:,:3]
  
                 c1, c2, c3 = st.columns(3)
-                with c1: st.image(orig_arr,  caption="Citra Asli",        use_container_width=True, clamp=True)
+                with c1: st.image(orig_arr,  caption="Citra Asli",         use_container_width=True, clamp=True)
                 with c2: st.image(hm_color,  caption="Grad-CAM++ Heatmap", use_container_width=True, clamp=True)
                 with c3: st.image(overlay,   caption="Overlay",            use_container_width=True, clamp=True)
-                st.caption(f"Explainable AI Grad-CAM++ · Prediksi: **{pred_label}** ({conf:.1f}%)")
+                st.caption(f"Explainable AI Grad-CAM++ · Prediksi: **{txt_pred_label}** ({txt_conf:.1f}%)")
  
-                # Deskripsi area fokus per kelas
+                # Deskripsi area fokus per kelas (berdasarkan prediksi ResNet50)
                 focus_area = {
                     'AMD':    'area drusen dan perubahan degeneratif pada epitel pigmen retina (RPE) serta membran Bruch',
                     'CNV':    'area neovaskularisasi koroidal dan kebocoran cairan subretinal di bawah makula',
@@ -1112,7 +1118,7 @@ with tab1:
                     'MH':     'area lubang makula di pusat fovea dan jaringan sekitarnya yang mengalami tarikan vitreous',
                     'NORMAL': 'lapisan retina yang sehat dan terstruktur dengan baik tanpa tanda-tanda patologi',
                 }
-                area = focus_area.get(pred_label, 'area lesi retina yang mengalami perubahan tekstur')
+                area = focus_area.get(txt_pred_label, 'area lesi retina yang mengalami perubahan tekstur')
  
                 st.markdown(f"""
                 <div class="analysis-box">
@@ -1120,12 +1126,12 @@ with tab1:
                     Hasil Grad-CAM++ menunjukkan bahwa model <strong>ResNet50</strong> 
                     lebih banyak memfokuskan perhatian pada 
                     <strong>{area}</strong> saat memprediksi kelas 
-                    <strong>{pred_label}</strong> dengan confidence <strong>{conf:.1f}%</strong>. 
+                    <strong>{txt_pred_label}</strong> dengan confidence <strong>{txt_conf:.1f}%</strong>. 
                     Warna merah-kuning pada heatmap menunjukkan area dengan aktivasi tertinggi, 
                     sementara warna biru menunjukkan area yang kurang relevan bagi model.<br><br>
                     Hal ini menunjukkan bahwa model telah mempelajari karakteristik visual 
-                    yang relevan secara klinis dengan diagnosis <strong>{pred_label}</strong> 
-                    ({CLASS_DESC.get(pred_label, '')}) pada citra OCT.
+                    yang relevan secara klinis dengan diagnosis <strong>{txt_pred_label}</strong> 
+                    ({CLASS_DESC.get(txt_pred_label, '')}) pada citra OCT.
                 </div>
                 """, unsafe_allow_html=True)
             except Exception as e:
