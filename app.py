@@ -1084,8 +1084,8 @@ with tab1:
  
         if st.button("🔍 Generate Grad-CAM++"):
             orig_arr = np.array(pil_img.resize(IMG_SIZE), dtype=np.float32) / 255.0
-            # Pilih EfficientNetB0, fallback ke model pertama jika tidak ada
-            gcam_model_name = 'EfficientNetB0' if 'EfficientNetB0' in models else list(models.keys())[0]
+            # Pilih ResNet50 (model terbaik, acc 93%), fallback ke model pertama jika tidak ada
+            gcam_model_name = 'ResNet50' if 'ResNet50' in models else list(models.keys())[0]
             gcam_model = models[gcam_model_name]
             pred_idx, conf, probs, pred_label, img_arr = results[gcam_model_name]
             try:
@@ -1117,7 +1117,7 @@ with tab1:
                 st.markdown(f"""
                 <div class="analysis-box">
                     <strong style='color:#0369a1'>📋 Analisis Visual Grad-CAM++</strong><br><br>
-                    Hasil Grad-CAM++ menunjukkan bahwa model <strong>EfficientNetB0</strong> 
+                    Hasil Grad-CAM++ menunjukkan bahwa model <strong>ResNet50</strong> 
                     lebih banyak memfokuskan perhatian pada 
                     <strong>{area}</strong> saat memprediksi kelas 
                     <strong>{pred_label}</strong> dengan confidence <strong>{conf:.1f}%</strong>. 
